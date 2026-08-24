@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import MemberModal from '../components/admin/MemberModal';
-import { MOCK_MEMBERS, derivarEstadoMeses } from '../data/mockMembers';
+import NewMemberModal from '../components/admin/NewMemberModal';
+import { derivarEstadoMeses } from '../utils/pagos';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 // ── Helpers ────────────────────────────────────────────────────────
 function getPaymentStatus(transacciones) {
@@ -34,9 +37,18 @@ function PaymentStrip({ transacciones }) {
 }
 
 // ── Vista: Miembros ────────────────────────────────────────────────
-function MiembrosView({ onOpenMember }) {
+function MiembrosView({ onOpenMember, miembros, loading }) {
   const [search, setSearch] = useState('');
-  const filtered = MOCK_MEMBERS.filter(m =>
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12 text-gray-400">
+        <span className="material-symbols-outlined text-4xl animate-spin">progress_activity</span>
+      </div>
+    );
+  }
+
+  const filtered = miembros.filter(m =>
     m.nombres.toLowerCase().includes(search.toLowerCase()) ||
     m.cedula.includes(search)
   );
@@ -45,10 +57,10 @@ function MiembrosView({ onOpenMember }) {
     <div className="space-y-6">
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Total Miembros" value={MOCK_MEMBERS.length} icon="groups" color="blue" />
-        <StatCard label="Al Día" value={MOCK_MEMBERS.filter(m => getPaymentStatus(m.transacciones).color === 'green').length} icon="check_circle" color="green" />
-        <StatCard label="Pendientes" value={MOCK_MEMBERS.filter(m => getPaymentStatus(m.transacciones).color === 'amber').length} icon="schedule" color="amber" />
-        <StatCard label="Deudores" value={MOCK_MEMBERS.filter(m => getPaymentStatus(m.transacciones).color === 'red').length} icon="warning" color="red" />
+        <StatCard label="Total Miembros" value={miembros.length} icon="groups" color="blue" />
+        <StatCard label="Al Día" value={miembros.filter(m => getPaymentStatus(m.transacciones).color === 'green').length} icon="check_circle" color="green" />
+        <StatCard label="Pendientes" value={miembros.filter(m => getPaymentStatus(m.transacciones).color === 'amber').length} icon="schedule" color="amber" />
+        <StatCard label="Deudores" value={miembros.filter(m => getPaymentStatus(m.transacciones).color === 'red').length} icon="warning" color="red" />
       </div>
 
       {/* Table */}
@@ -79,9 +91,18 @@ function MiembrosView({ onOpenMember }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map(member => {
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-5 py-8 text-center text-gray-500 text-sm">
+                    No hay miembros registrados aún.
+                  </td>
+                </tr>
+              ) : filtered.map(member => {
                 const status = getPaymentStatus(member.transacciones);
-                const rep = member.representante === 'Madre' ? member.madre : member.padre;
+                const isMadre = member.representante_legal === 'Madre';
+                const repNombres = isMadre ? member.madre_nombres : member.padre_nombres;
+                const repTelefono = isMadre ? member.madre_telefono : member.padre_telefono;
+                
                 return (
                   <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-4">
@@ -99,8 +120,8 @@ function MiembrosView({ onOpenMember }) {
                       <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">{member.categoria}</span>
                     </td>
                     <td className="px-5 py-4">
-                      <p className="text-sm text-gray-700 font-medium leading-tight">{rep?.nombres?.split(' ').slice(0,2).join(' ')}</p>
-                      <p className="text-xs text-gray-400">{rep?.telefono}</p>
+                      <p className="text-sm text-gray-700 font-medium leading-tight">{repNombres?.split(' ').slice(0,2).join(' ') || 'N/A'}</p>
+                      <p className="text-xs text-gray-400">{repTelefono || 'Sin teléfono'}</p>
                     </td>
                     <td className="px-5 py-4">
                       <PaymentStrip transacciones={member.transacciones} />
@@ -128,7 +149,7 @@ function MiembrosView({ onOpenMember }) {
         </div>
 
         <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-xs text-gray-500">Mostrando {filtered.length} de {MOCK_MEMBERS.length} miembros</span>
+          <span className="text-xs text-gray-500">Mostrando {filtered.length} de {miembros.length} miembros</span>
           <div className="flex gap-1">
             <div className="flex gap-3 text-xs text-gray-500 items-center">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Pagado</span>
@@ -149,22 +170,15 @@ function PagosView() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Ingresos Totales (YTD)</p>
-          <h3 className="text-3xl font-bold text-[#001f3f]">$4,830</h3>
-          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">trending_up</span> +12% vs año anterior
-          </p>
+          <h3 className="text-3xl font-bold text-[#001f3f]">$0</h3>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Deuda Total</p>
-          <h3 className="text-3xl font-bold text-red-600">$560</h3>
-          <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">warning</span> 4 meses vencidos en total
-          </p>
+          <h3 className="text-3xl font-bold text-red-600">$0</h3>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Membresías Activas</p>
-          <h3 className="text-3xl font-bold text-[#001f3f]">3</h3>
-          <p className="text-xs text-gray-400 mt-2">Año lectivo 2024–2025</p>
+          <h3 className="text-3xl font-bold text-[#001f3f]">0</h3>
         </div>
       </div>
 
@@ -172,38 +186,8 @@ function PagosView() {
         <div className="px-5 py-4 border-b border-gray-100">
           <h3 className="font-bold text-gray-800">Últimas Transacciones</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Miembro</th>
-                <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Concepto</th>
-                <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Monto</th>
-                <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
-              {[
-                { nombre: 'Juliana Pérez',   concepto: 'Pensión FEB',  fecha: '03/02/2025', monto: '$35.00', estado: 'pagado' },
-                { nombre: 'Jessica Smith',   concepto: 'Pensión OCT',  fecha: '05/10/2024', monto: '$40.00', estado: 'pagado' },
-                { nombre: 'Ana Torres',      concepto: 'Pensión MAR',  fecha: '04/03/2025', monto: '$35.00', estado: 'pagado' },
-                { nombre: 'Jessica Smith',   concepto: 'Pensión NOV',  fecha: null,          monto: '$40.00', estado: 'vencido' },
-              ].map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium text-gray-800">{row.nombre}</td>
-                  <td className="px-5 py-3 text-gray-600">{row.concepto}</td>
-                  <td className="px-5 py-3 text-gray-500">{row.fecha || '—'}</td>
-                  <td className="px-5 py-3 font-bold text-gray-800">{row.monto}</td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${statusStyle[row.estado === 'pagado' ? 'green' : 'red']}`}>
-                      {row.estado === 'pagado' ? 'Pagado' : 'Vencido'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="p-8 text-center text-sm text-gray-500">
+          No hay transacciones recientes para mostrar (Los datos reales provendrán de Supabase).
         </div>
       </section>
     </div>
@@ -233,6 +217,36 @@ function StatCard({ label, value, icon, color }) {
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('miembros');
   const [selectedMember, setSelectedMember] = useState(null);
+  const [showNewMemberModal, setShowNewMemberModal] = useState(false);
+  const [miembros, setMiembros] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchMiembros = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('miembros').select('*, transacciones(*)');
+      if (error) {
+        console.error('Error fetching miembros:', error);
+      } else {
+        setMiembros(data || []);
+      }
+      setLoading(false);
+    };
+    fetchMiembros();
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const handleMemberAdded = (newMember) => {
+    // Agregamos una propiedad vacía de transacciones para que no falle el getPaymentStatus
+    const memberWithTxns = { ...newMember, transacciones: [] };
+    setMiembros(prev => [memberWithTxns, ...prev]);
+  };
 
   const navItems = [
     { id: 'pagos',    label: 'Ingresos',  icon: 'payments' },
@@ -281,10 +295,13 @@ export default function Admin() {
             <span className="material-symbols-outlined text-[20px]">home</span>
             Volver al sitio
           </Link>
-          <Link to="/login" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-300 hover:bg-red-900/40 transition-all">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-300 hover:bg-red-900/40 transition-all w-full text-left"
+          >
             <span className="material-symbols-outlined text-[20px]">logout</span>
             Cerrar Sesión
-          </Link>
+          </button>
         </div>
       </nav>
 
@@ -306,7 +323,7 @@ export default function Admin() {
               Exportar
             </button>
             <button
-              onClick={() => setActiveTab('miembros')}
+              onClick={() => setShowNewMemberModal(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
@@ -318,7 +335,7 @@ export default function Admin() {
         {/* Content */}
         <div className="p-6">
           {activeTab === 'pagos'    && <PagosView />}
-          {activeTab === 'miembros' && <MiembrosView onOpenMember={setSelectedMember} />}
+          {activeTab === 'miembros' && <MiembrosView onOpenMember={setSelectedMember} miembros={miembros} loading={loading} />}
           {activeTab === 'config'   && (
             <div className="text-gray-500 text-sm p-8 text-center">
               <span className="material-symbols-outlined text-4xl text-gray-300 block mb-2">settings</span>
@@ -333,6 +350,13 @@ export default function Admin() {
         <MemberModal
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
+        />
+      )}
+      
+      {showNewMemberModal && (
+        <NewMemberModal
+          onClose={() => setShowNewMemberModal(false)}
+          onMemberAdded={handleMemberAdded}
         />
       )}
     </div>

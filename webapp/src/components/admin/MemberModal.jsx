@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { MESES_LECTIVOS, derivarEstadoMeses } from '../../data/mockMembers';
+import { derivarEstadoMeses } from '../../utils/pagos';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -18,10 +18,10 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
             <h3 className="font-bold text-gray-800">Comprobante de Pago</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Fecha: {transaccion.fecha} · ${transaccion.montoReal.toFixed(2)}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Fecha: {transaccion.fecha_pago} · ${Number(transaccion.monto_real).toFixed(2)}</p>
           </div>
           <div className="flex items-center gap-2">
-            <a href={transaccion.comprobante} download target="_blank" rel="noreferrer"
+            <a href={transaccion.comprobante_url} download target="_blank" rel="noreferrer"
                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition-colors">
               <span className="material-symbols-outlined text-[18px]">download</span> Descargar
             </a>
@@ -35,7 +35,7 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
         <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Meses cubiertos por este pago</p>
           <div className="flex gap-2 flex-wrap">
-            {transaccion.mesesCubiertos.map(cod => (
+            {transaccion.meses_cubiertos?.map(cod => (
               <span key={cod}
                 className={`px-3 py-1 rounded-full text-xs font-bold border ${cod === mesCodigo ? 'bg-[#001f3f] text-white border-[#001f3f]' : 'bg-white text-gray-600 border-gray-300'}`}>
                 {cod}
@@ -48,7 +48,7 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
         </div>
 
         <div className="p-4 bg-gray-50 flex items-center justify-center min-h-56">
-          <img src={transaccion.comprobante} alt="Comprobante"
+          <img src={transaccion.comprobante_url} alt="Comprobante"
                className="max-w-full rounded-lg shadow object-contain max-h-80" />
         </div>
       </div>
@@ -95,11 +95,11 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose }) {
     if (mesesSeleccionados.length === 0) { alert('Selecciona al menos un mes.'); return; }
     onSave({
       id: `txn-${Date.now()}`,
-      fecha: fecha.split('-').reverse().join('/'),
-      montoReal: parseFloat(montoReal) || montoCalculado,
+      fecha_pago: fecha.split('-').reverse().join('/'),
+      monto_real: parseFloat(montoReal) || montoCalculado,
       notas,
-      comprobante: preview,
-      mesesCubiertos: mesesSeleccionados,
+      comprobante_url: preview,
+      meses_cubiertos: mesesSeleccionados,
     });
   };
 
@@ -237,7 +237,7 @@ function PagosTab({ member, onUpdateMember }) {
   const pagados    = mesesStatus.filter(m => ['pagado','adelanto'].includes(m.estado)).length;
   const vencidos   = mesesStatus.filter(m => m.estado === 'vencido').length;
   const adelantos  = mesesStatus.filter(m => m.estado === 'adelanto').length;
-  const totalPagado = member.transacciones.reduce((s, t) => s + t.montoReal, 0);
+  const totalPagado = (member.transacciones || []).reduce((s, t) => s + Number(t.monto_real || 0), 0);
   const montoVencido = mesesStatus.filter(m => m.estado === 'vencido').reduce((s, m) => s + m.montoPension, 0);
 
   const handleSavePago = (nuevaTxn) => {
@@ -251,7 +251,7 @@ function PagosTab({ member, onUpdateMember }) {
 
   const handleCellClick = (mes) => {
     if (!mes.transaccion) return;
-    if (!mes.transaccion.comprobante) {
+    if (!mes.transaccion.comprobante_url) {
       alert('Este pago no tiene comprobante adjunto.');
       return;
     }
@@ -294,9 +294,9 @@ function PagosTab({ member, onUpdateMember }) {
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
         {mesesStatus.map(mes => {
           const c = ESTADO_CONFIG[mes.estado];
-          const hasReceipt = mes.transaccion?.comprobante;
+          const hasReceipt = mes.transaccion?.comprobante_url;
           const clickable = ['pagado','adelanto'].includes(mes.estado);
-          const otrosMeses = mes.transaccion?.mesesCubiertos?.filter(x => x !== mes.codigo) || [];
+          const otrosMeses = mes.transaccion?.meses_cubiertos?.filter(x => x !== mes.codigo) || [];
 
           return (
             <div
@@ -334,22 +334,22 @@ function PagosTab({ member, onUpdateMember }) {
       <div>
         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Historial de Transacciones</h4>
         <div className="space-y-2">
-          {member.transacciones.map(txn => (
+          {(member.transacciones || []).map(txn => (
             <div key={txn.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#001f3f]/10 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[16px] text-[#001f3f]">receipt_long</span>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">{txn.mesesCubiertos.join(' + ')}</p>
-                  <p className="text-xs text-gray-400">{txn.fecha}{txn.notas ? ` · ${txn.notas}` : ''}</p>
+                  <p className="text-sm font-semibold text-gray-800">{txn.meses_cubiertos?.join(' + ')}</p>
+                  <p className="text-xs text-gray-400">{txn.fecha_pago}{txn.notas ? ` · ${txn.notas}` : ''}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-gray-800">${txn.montoReal.toFixed(2)}</p>
-                {txn.comprobante && (
+                <p className="font-bold text-gray-800">${Number(txn.monto_real).toFixed(2)}</p>
+                {txn.comprobante_url && (
                   <button
-                    onClick={() => setReceiptOpen({ transaccion: txn, mesCodigo: txn.mesesCubiertos[0] })}
+                    onClick={() => setReceiptOpen({ transaccion: txn, mesCodigo: txn.meses_cubiertos[0] })}
                     className="text-[10px] text-blue-600 hover:underline">
                     Ver comprobante
                   </button>
@@ -419,7 +419,7 @@ function FichaTab({ member }) {
         <Section title="Datos del Jugador" icon="sports_volleyball">
           <Field label="Nombres" value={member.nombres} full />
           <Field label="Cédula" value={member.cedula} />
-          <Field label="Fecha de Nacimiento" value={member.fechaNacimiento} />
+          <Field label="Fecha de Nacimiento" value={member.fecha_nacimiento} />
           <Field label="Género" value={member.genero} />
           <Field label="Nacionalidad" value={member.nacionalidad} />
           <Field label="Dirección" value={member.direccion} full />
@@ -427,35 +427,35 @@ function FichaTab({ member }) {
         <Section title="Ficha Médica" icon="medical_information">
           <Field label="Discapacidad" value={member.discapacidad} />
           {member.discapacidad === 'SÍ' && <>
-            <Field label="Tipo" value={member.tipoDiscapacidad} />
-            <Field label="Porcentaje" value={`${member.porcentajeDiscapacidad}%`} />
+            <Field label="Tipo" value={member.tipo_discapacidad} />
+            <Field label="Porcentaje" value={`${member.porcentaje_discapacidad}%`} />
           </>}
           <Field label="NEE" value={member.nee} />
-          <Field label="Usa Lentes" value={member.usaLentes} />
+          <Field label="Usa Lentes" value={member.usa_lentes} />
         </Section>
         <Section title="Datos del Padre" icon="person">
-          <Field label="Nombres" value={member.padre.nombres} full />
-          <Field label="Cédula" value={member.padre.cedula} />
-          <Field label="Teléfono" value={member.padre.telefono} />
-          <Field label="Ocupación" value={member.padre.ocupacion} />
+          <Field label="Nombres" value={member.padre_nombres} full />
+          <Field label="Cédula" value={member.padre_cedula} />
+          <Field label="Teléfono" value={member.padre_telefono} />
+          <Field label="Ocupación" value={member.padre_ocupacion} />
         </Section>
         <Section title="Datos de la Madre" icon="person">
-          <Field label="Nombres" value={member.madre.nombres} full />
-          <Field label="Cédula" value={member.madre.cedula} />
-          <Field label="Teléfono" value={member.madre.telefono} />
-          <Field label="Ocupación" value={member.madre.ocupacion} />
+          <Field label="Nombres" value={member.madre_nombres} full />
+          <Field label="Cédula" value={member.madre_cedula} />
+          <Field label="Teléfono" value={member.madre_telefono} />
+          <Field label="Ocupación" value={member.madre_ocupacion} />
         </Section>
         <Section title="Representante Legal" icon="verified_user">
-          <Field label="Es representante" value={member.representante} />
+          <Field label="Es representante" value={member.representante_legal} />
           <Field label="Teléfono"
-            value={member.representante === 'Madre' ? member.madre.telefono : member.padre.telefono} />
+            value={member.representante_legal === 'Madre' ? member.madre_telefono : member.padre_telefono} />
         </Section>
         <Section title="Datos de Facturación" icon="receipt">
-          <Field label="Cédula / RUC" value={member.facturacion.ruc} />
-          <Field label="Razón Social" value={member.facturacion.nombre} full />
-          <Field label="Dirección" value={member.facturacion.direccion} full />
-          <Field label="Teléfono" value={member.facturacion.telefono} />
-          <Field label="Correo" value={member.facturacion.correo} />
+          <Field label="Cédula / RUC" value={member.facturacion_ruc} />
+          <Field label="Razón Social" value={member.facturacion_nombre} full />
+          <Field label="Dirección" value={member.facturacion_direccion} full />
+          <Field label="Teléfono" value={member.facturacion_telefono} />
+          <Field label="Correo" value={member.facturacion_correo} />
         </Section>
       </div>
     </div>

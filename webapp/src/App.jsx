@@ -8,6 +8,9 @@ import Perfil from './pages/Perfil';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
+import Blog from './pages/Blog';
+import Galeria from './pages/Galeria';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
   const location = useLocation();
@@ -32,12 +35,33 @@ function AppContent() {
       {!isNoLayout && <Navbar />}
       <main className="flex-grow">
         <Routes>
+          {/* Rutas públicas */}
           <Route path="/" element={<Home />} />
           <Route path="/horarios" element={<Horarios />} />
-          <Route path="/perfil" element={<Perfil />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/galeria" element={<Galeria />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
+
+          {/* Rutas protegidas — requieren sesión activa */}
+          <Route
+            path="/perfil"
+            element={
+              <ProtectedRoute>
+                <Perfil />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Ruta de admin — requiere sesión + rol admin */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute adminOnly>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
       {!isNoLayout && <Footer />}

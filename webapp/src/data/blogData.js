@@ -1,0 +1,91 @@
+// ─── Datos del Blog — Club Pito Pérez ─────────────────────────────────────────
+
+export const CATEGORIAS = {
+  torneos: { label: 'Torneos',    bg: 'bg-orange-100 text-orange-700 border-orange-200' },
+  noticias: { label: 'Noticias',  bg: 'bg-blue-100  text-blue-700  border-blue-200'  },
+  tecnica:  { label: 'Técnica',   bg: 'bg-green-100 text-green-700 border-green-200' },
+  club:     { label: 'Club',      bg: 'bg-purple-100 text-purple-700 border-purple-200' },
+};
+
+export const BLOG_POSTS = [
+  {
+    id: 'b1',
+    titulo: '¡1er Lugar en el Torneo Intercolegial 2025!',
+    categoria: 'torneos',
+    fecha: '20 de Agosto, 2025',
+    autor: 'Kevin Culcay',
+    imagen: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=800&q=80',
+    extracto: 'Nuestras jugadoras de U14 y U16 demostraron un nivel técnico y mental excepcional, conquistando el primer lugar ante 12 equipos participantes.',
+    contenido: [
+      'El pasado fin de semana fue histórico para el Club Pito Pérez. Nuestras jugadoras de las categorías U14 y U16 se coronaron campeonas del Torneo Intercolegial 2025, celebrado en el Coliseo Mayor de Guayaquil.',
+      'Con 12 equipos participantes provenientes de toda la región, nuestra delegación mostró el trabajo y la dedicación de meses de entrenamiento. La final fue un partido electrizante que terminó 3-1 ante el equipo favorito del torneo.',
+      'Felicitamos a todas nuestras jugadoras, a sus familias, y a los entrenadores Kevin Culcay y Marcos Pérez por este logro inolvidable. Este es solo el comienzo de una gran temporada para el club. 🏆🏐',
+    ],
+    tiempoLectura: '3 min',
+  },
+  {
+    id: 'b2',
+    titulo: '5 Ejercicios para Mejorar tu Saque desde Casa',
+    categoria: 'tecnica',
+    fecha: '10 de Agosto, 2025',
+    autor: 'Marcos Pérez',
+    imagen: 'https://images.unsplash.com/photo-1574610758834-58ca16a73fb9?w=800&q=80',
+    extracto: 'El saque es una de las habilidades más importantes del voleibol. Aquí compartimos 5 ejercicios que puedes practicar en casa para mejorar tu técnica y potencia.',
+    contenido: [
+      'Mejorar el saque no requiere siempre estar en la cancha. Con dedicación y los ejercicios correctos, puedes desarrollar una técnica sólida desde casa.',
+      '1. Fortalecimiento del Core: Un core fuerte es la base de un buen saque. Realiza 3 series de 20 abdominales y 30 segundos de plancha cada día.',
+      '2. Rotación de Hombro: Con una liga elástica, simula el movimiento del brazo al sacar. 3 series de 15 repeticiones cada lado.',
+      '3. Visualización y Respiración: Visualiza el balón, el arco perfecto y la zona de caída. La técnica mental es tan importante como la física.',
+      '4. Práctica de Contacto con la Pared: Golpea la pelota contra la pared simulando el punto de contacto del saque. Enfócate en la posición de la mano.',
+      '5. Coordinación ojo-mano: Lanza la pelota hacia arriba y atrápala exactamente donde harías el saque. Esto mejora el timing.',
+    ],
+    tiempoLectura: '4 min',
+  },
+  {
+    id: 'b3',
+    titulo: 'Nuevas Jugadoras dan sus Primeros Pasos en el Club',
+    categoria: 'noticias',
+    fecha: '1 de Agosto, 2025',
+    autor: 'Kevin Culcay',
+    imagen: 'https://images.unsplash.com/photo-1540206395-68808572332e?w=800&q=80',
+    extracto: 'Con gran entusiasmo recibimos a 8 nuevas jugadoras en nuestra familia. Bienvenidas a la familia naranja del Club Pito Pérez.',
+    contenido: [
+      'Con emoción y orgullo les presentamos a las 8 nuevas jugadoras que se incorporaron al Club Pito Pérez este mes de agosto.',
+      'Provenientes de distintos colegios de Guayaquil y Samborondón, estas jugadoras demostraron un excelente potencial en las pruebas de selección realizadas durante la semana.',
+      'Serán distribuidas en las categorías U12 y U14, donde trabajarán bajo la guía del Entrenador Marcos Pérez para desarrollar sus fundamentos y comenzar su camino hacia la élite. ¡Bienvenidas, jugadoras! Esta es su nueva casa. 🏐💙',
+    ],
+    tiempoLectura: '2 min',
+  },
+  {
+    id: 'b4',
+    titulo: 'Temporada 2025-2026: Objetivos y Torneos Confirmados',
+    categoria: 'club',
+    fecha: '15 de Julio, 2025',
+    autor: 'Kevin Culcay',
+    imagen: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d254?w=800&q=80',
+    extracto: 'Con la temporada 2025-2026 a la vuelta de la esquina, el cuerpo técnico comparte los objetivos y los torneos en los que participaremos.',
+    contenido: [
+      'La nueva temporada lectiva trae consigo grandes retos y oportunidades para el Club Pito Pérez. El cuerpo técnico ha trazado objetivos claros para continuar creciendo.',
+      'Objetivos principales: Clasificar al campeonato nacional en categorías U14 y U16, incrementar el número de jugadoras, y certificar atletas para selecciones provinciales.',
+      'Torneos programados: Torneo Apertura Intercolegial (Septiembre), Campeonato Provincial Sub-14 (Noviembre), Copa Pito Pérez (Diciembre), y Torneo Nacional de Clubes (Febrero 2026).',
+      '¡Vamos con todo! 💪🏐',
+    ],
+    tiempoLectura: '5 min',
+  },
+  {
+    id: 'b5',
+    titulo: 'Cómo Elegir el Calzado Correcto para Voleibol',
+    categoria: 'tecnica',
+    fecha: '5 de Julio, 2025',
+    autor: 'Marcos Pérez',
+    imagen: 'https://images.unsplash.com/photo-1566826435297-2a8d0fb1e1c5?w=800&q=80',
+    extracto: 'El calzado correcto puede marcar la diferencia en tu rendimiento y prevenir lesiones. Te explicamos qué características buscar.',
+    contenido: [
+      'El calzado es uno de los elementos más importantes para cualquier jugadora de voleibol. Un buen par de zapatillas puede mejorar el rendimiento y protegerte de lesiones graves.',
+      'Amortiguación: Busca zapatillas con buena amortiguación en el talón y el antepié, especialmente si juegas de atacante donde los saltos son frecuentes.',
+      'Agarre: La suela debe ofrecer buen grip en superficies de parquet o goma. Soporte lateral: El voleibol requiere movimientos explosivos, un buen soporte en el tobillo es esencial.',
+      'Marcas recomendadas: Asics Gel-Rocket, Mizuno Wave Lightning, Nike Air Zoom son opciones probadas en competencia. Siempre prueba el calzado antes de comprarlo.',
+    ],
+    tiempoLectura: '4 min',
+  },
+];

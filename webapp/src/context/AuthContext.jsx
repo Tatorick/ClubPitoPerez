@@ -1,27 +1,34 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+// Lista de emails admin desde variable de entorno (separados por coma)
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+const isAdminEmail = (email) => ADMIN_EMAILS.includes(email?.toLowerCase());
+
 // ── Contexto de Autenticación con Supabase ─────────────────────────────────────
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Un flag para isAdmin basado en el email temporalmente (o en roles luego)
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // 1. Obtener sesión activa al cargar la app
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.email === 'admin@pitopc.ec'); // Admin harcodeado por email por ahora
+      setIsAdmin(isAdminEmail(session?.user?.email));
       setLoading(false);
     });
 
     // 2. Escuchar cambios de sesión (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.email === 'admin@pitopc.ec');
+      setIsAdmin(isAdminEmail(session?.user?.email));
       setLoading(false);
     });
 

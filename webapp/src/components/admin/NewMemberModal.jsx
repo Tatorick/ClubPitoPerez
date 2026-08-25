@@ -15,6 +15,9 @@ export default function NewMemberModal({ onClose, onMemberAdded }) {
     nacionalidad: 'Ecuatoriana',
     direccion: '',
     categoria: 'U12',
+    tiene_beca: false,
+    tipo_beca: '',
+    monto_pension: 55,
     
     tiene_discapacidad: false,
     tipo_discapacidad: '',
@@ -221,6 +224,44 @@ export default function NewMemberModal({ onClose, onMemberAdded }) {
                       <option>U18</option>
                       <option>Mayores</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-amber-900 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[15px] text-amber-600">star</span>
+                      ¿Tiene Beca / Descuento?
+                    </label>
+                    <select
+                      name="tiene_beca"
+                      value={formData.tiene_beca ? 'SI' : 'NO'}
+                      onChange={e => {
+                        const hasBeca = e.target.value === 'SI';
+                        setFormData(prev => ({
+                          ...prev,
+                          tiene_beca: hasBeca,
+                          monto_pension: hasBeca ? 25 : 55,
+                          tipo_beca: hasBeca ? 'Beca Deportiva' : ''
+                        }));
+                      }}
+                      className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="NO">No (Pensión Regular $55)</option>
+                      <option value="SI">Sí (Becado/a)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-amber-900">Monto Mensual Asignado ($ USD)</label>
+                    <input
+                      type="number"
+                      name="monto_pension"
+                      step="0.01"
+                      min="0"
+                      value={formData.monto_pension}
+                      onChange={handleChange}
+                      className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white font-bold text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
                   </div>
                 </div>
 

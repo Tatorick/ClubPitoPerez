@@ -51,11 +51,14 @@ export default function Home() {
     <div className="bg-background text-on-background font-body-md overflow-x-hidden">
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <header className="relative w-full h-[870px] flex items-center justify-center overflow-hidden">
+      <header className="relative w-full min-h-[100svh] sm:min-h-0 sm:h-[700px] md:h-[870px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center"
-            style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDxPZXbvzxQ6w8RgzYnzNcibUivdriJ72Blq3FJUo013R9NARmiIG9cDjOmftN6Zs7Cbxgw861_ilgH48dLGa18j2dCn4or3_xnZ2Xrf1APyaOw859j2hE2tBzBibPD1ejZW7ZrNPt9daXq4BWozQ1SO8VnJ8rTQWrHsXPi4siIw0CyoNzih8I1_Af5Y7DSa4bgRHl6C3rHCtJsa5uFKF-765ZiktuLGH-sakhe1YM81xTuAIx7HErE')"}}
+          <img
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxPZXbvzxQ6w8RgzYnzNcibUivdriJ72Blq3FJUo013R9NARmiIG9cDjOmftN6Zs7Cbxgw861_ilgH48dLGa18j2dCn4or3_xnZ2Xrf1APyaOw859j2hE2tBzBibPD1ejZW7ZrNPt9daXq4BWozQ1SO8VnJ8rTQWrHsXPi4siIw0CyoNzih8I1_Af5Y7DSa4bgRHl6C3rHCtJsa5uFKF-765ZiktuLGH-sakhe1YM81xTuAIx7HErE"
+            alt="Jugadoras de voleibol del Club Pito Pérez"
+            className="w-full h-full object-cover"
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-primary/70" />
         </div>

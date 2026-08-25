@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { derivarEstadoMeses } from '../../utils/pagos';
+import { supabase } from '../../lib/supabase';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -95,7 +96,7 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose }) {
     if (mesesSeleccionados.length === 0) { alert('Selecciona al menos un mes.'); return; }
     onSave({
       id: `txn-${Date.now()}`,
-      fecha_pago: fecha.split('-').reverse().join('/'),
+      fecha_pago: fecha,
       monto_real: parseFloat(montoReal) || montoCalculado,
       notas,
       comprobante_url: preview,
@@ -127,7 +128,7 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose }) {
               {mesesDisponibles.length === 0 ? (
                 <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg p-3">✓ Todos los meses están al día.</p>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {mesesDisponibles.map(m => {
                     const selected = mesesSeleccionados.includes(m.codigo);
                     return (
@@ -233,19 +234,41 @@ function PagosTab({ member, onUpdateMember }) {
   const [receiptOpen, setReceiptOpen] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
 
-  const mesesStatus = derivarEstadoMeses(member.transacciones);
+  const montoPension = Number(member.monto_pension ?? 55.00);
+  const tieneBeca = member.tiene_beca === true || (montoPension < 55.00);
+  const tipoBeca = member.tipo_beca || (tieneBeca ? 'Beca Deportiva' : null);
+
+  const mesesStatus = derivarEstadoMeses(member.transacciones, montoPension);
   const pagados    = mesesStatus.filter(m => ['pagado','adelanto'].includes(m.estado)).length;
   const vencidos   = mesesStatus.filter(m => m.estado === 'vencido').length;
   const adelantos  = mesesStatus.filter(m => m.estado === 'adelanto').length;
   const totalPagado = (member.transacciones || []).reduce((s, t) => s + Number(t.monto_real || 0), 0);
   const montoVencido = mesesStatus.filter(m => m.estado === 'vencido').reduce((s, m) => s + m.montoPension, 0);
 
-  const handleSavePago = (nuevaTxn) => {
+  const handleSavePago = async (nuevaTxn) => {
+    try {
+      if (member.id && !member.id.startsWith('demo-')) {
+        const { data: dbTxn, error: tErr } = await supabase.from('transacciones').insert({
+          miembro_id: member.id,
+          fecha_pago: nuevaTxn.fecha_pago,
+          monto_real: nuevaTxn.monto_real,
+          notas: nuevaTxn.notas,
+          comprobante_url: nuevaTxn.comprobante_url,
+          meses_cubiertos: nuevaTxn.meses_cubiertos,
+        }).select().single();
+
+        if (tErr) console.error('Error guardando transaccion en Supabase:', tErr);
+        if (dbTxn) nuevaTxn = dbTxn;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
     const updatedMember = {
       ...member,
       transacciones: [...(member.transacciones || []), nuevaTxn]
     };
-    onUpdateMember(updatedMember);
+    if (onUpdateMember) onUpdateMember(updatedMember);
     setRegisterOpen(false);
   };
 
@@ -260,6 +283,21 @@ function PagosTab({ member, onUpdateMember }) {
 
   return (
     <div className="p-6 space-y-6">
+      {tieneBeca && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-amber-600">star</span>
+            <div>
+              <p className="text-xs font-bold text-amber-900">{tipoBeca || 'Deportista con Beca'}</p>
+              <p className="text-[11px] text-amber-700">Pensión asignada: <strong>${montoPension.toFixed(2)}/mes</strong> (Pensión regular: $55.00)</p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900">
+            ${montoPension.toFixed(2)} / mes
+          </span>
+        </div>
+      )}
+
       {/* Tarjetas resumen */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">

@@ -39,7 +39,14 @@ function PaymentStrip({ transacciones }) {
 // ── Vista: Miembros ────────────────────────────────────────────────
 function MiembrosView({ onOpenMember, miembros, loading }) {
   const [search, setSearch] = useState('');
-  
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce: esperar 300ms después de que el usuario deja de escribir
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12 text-gray-400">
@@ -48,9 +55,10 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
     );
   }
 
+  const q = debouncedSearch.toLowerCase();
   const filtered = miembros.filter(m =>
-    m.nombres.toLowerCase().includes(search.toLowerCase()) ||
-    m.cedula.includes(search)
+    (m.nombres || '').toLowerCase().includes(q) ||
+    (m.cedula || '').includes(debouncedSearch)
   );
 
   return (
@@ -78,7 +86,54 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* ── Vista Mobile: Cards ── */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {filtered.length === 0 ? (
+            <p className="px-5 py-8 text-center text-gray-500 text-sm">No hay miembros registrados aún.</p>
+          ) : filtered.map(member => {
+            const status = getPaymentStatus(member.transacciones);
+            const isMadre = member.representante_legal === 'Madre';
+            const repNombres = isMadre ? member.madre_nombres : member.padre_nombres;
+            const repTelefono = isMadre ? member.madre_telefono : member.padre_telefono;
+            return (
+              <div key={member.id} className="p-4 flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#001f3f] text-white flex items-center justify-center text-sm font-bold shrink-0">
+                  {(member.nombres || '').split(' ').map(n => n[0]).slice(0, 2).join('')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="font-semibold text-gray-800 text-sm leading-tight truncate">{member.nombres}</p>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${statusStyle[status.color]}`}>
+                      <span className="material-symbols-outlined text-[12px]">{status.icon}</span>
+                      {status.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-1">C.I. {member.cedula}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">{member.categoria}</span>
+                    {(member.tiene_beca === true || (member.monto_pension && Number(member.monto_pension) < 55)) && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-300">
+                        ⭐ Beca ${Number(member.monto_pension || 25).toFixed(0)}
+                      </span>
+                    )}
+                    <PaymentStrip transacciones={member.transacciones} />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{repNombres?.split(' ').slice(0, 2).join(' ') || 'Sin representante'} · {repTelefono || ''}</p>
+                </div>
+                <button
+                  onClick={() => onOpenMember(member)}
+                  className="shrink-0 p-2 rounded-lg bg-[#001f3f] text-white hover:bg-blue-900 transition-colors"
+                  title="Ver detalle"
+                >
+                  <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Vista Desktop: Tabla ── */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -102,13 +157,12 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
                 const isMadre = member.representante_legal === 'Madre';
                 const repNombres = isMadre ? member.madre_nombres : member.padre_nombres;
                 const repTelefono = isMadre ? member.madre_telefono : member.padre_telefono;
-                
                 return (
                   <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-[#001f3f] text-white flex items-center justify-center text-sm font-bold shrink-0">
-                          {member.nombres.split(' ').map(n=>n[0]).slice(0,2).join('')}
+                          {(member.nombres || '').split(' ').map(n => n[0]).slice(0, 2).join('')}
                         </div>
                         <div>
                           <p className="font-semibold text-gray-800 text-sm leading-tight">{member.nombres}</p>
@@ -117,7 +171,15 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">{member.categoria}</span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">{member.categoria}</span>
+                        {(member.tiene_beca === true || (member.monto_pension && Number(member.monto_pension) < 55)) && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-300 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[11px] text-amber-600">star</span>
+                            Beca ${Number(member.monto_pension || 25).toFixed(0)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       <p className="text-sm text-gray-700 font-medium leading-tight">{repNombres?.split(' ').slice(0,2).join(' ') || 'N/A'}</p>
@@ -150,12 +212,10 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
 
         <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
           <span className="text-xs text-gray-500">Mostrando {filtered.length} de {miembros.length} miembros</span>
-          <div className="flex gap-1">
-            <div className="flex gap-3 text-xs text-gray-500 items-center">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Pagado</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Pendiente</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Vencido</span>
-            </div>
+          <div className="hidden sm:flex gap-3 text-xs text-gray-500 items-center">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Pagado</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Pendiente</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Vencido</span>
           </div>
         </div>
       </section>
@@ -306,19 +366,19 @@ export default function Admin() {
       </nav>
 
       {/* ── Main ── */}
-      <main className="lg:ml-64 flex-grow flex flex-col overflow-y-auto">
+      <main className="lg:ml-64 flex-grow flex flex-col overflow-y-auto pb-20 lg:pb-0">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-sm">
           <div>
-            <h1 className="text-xl font-bold text-gray-800">
+            <h1 className="text-base md:text-xl font-bold text-gray-800">
               {activeTab === 'pagos'    ? 'Ingresos y Pagos'       : ''}
               {activeTab === 'miembros' ? 'Directorio de Miembros'  : ''}
               {activeTab === 'config'   ? 'Ajustes'                 : ''}
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5">Año lectivo 2024 – 2025</p>
+            <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">A\u00f1o lectivo 2024 \u2013 2025</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">
+            <button className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">
               <span className="material-symbols-outlined text-[16px]">download</span>
               Exportar
             </button>
@@ -327,29 +387,59 @@ export default function Admin() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
-              Nuevo Miembro
+              <span className="hidden sm:inline">Nuevo Miembro</span>
+              <span className="sm:hidden">Nuevo</span>
             </button>
           </div>
         </header>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {activeTab === 'pagos'    && <PagosView />}
           {activeTab === 'miembros' && <MiembrosView onOpenMember={setSelectedMember} miembros={miembros} loading={loading} />}
           {activeTab === 'config'   && (
             <div className="text-gray-500 text-sm p-8 text-center">
               <span className="material-symbols-outlined text-4xl text-gray-300 block mb-2">settings</span>
-              Configuración del portal (próximamente)
+              Configuraci\u00f3n del portal (pr\u00f3ximamente)
             </div>
           )}
         </div>
       </main>
+
+      {/* ── Bottom Nav Mobile (lg:hidden) ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#001f3f] border-t border-white/10 flex">
+        {navItems.map(item => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[11px] font-semibold transition-colors ${
+              activeTab === item.id
+                ? 'text-orange-400'
+                : 'text-blue-300 hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+        <button
+          onClick={handleLogout}
+          className="flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[11px] font-semibold text-red-400 hover:text-red-300 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[22px]">logout</span>
+          Salir
+        </button>
+      </nav>
 
       {/* ── Member Modal ── */}
       {selectedMember && (
         <MemberModal
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
+          onUpdateMember={(updated) => {
+            setSelectedMember(updated);
+            setMiembros(prev => prev.map(m => m.id === updated.id ? updated : m));
+          }}
         />
       )}
       

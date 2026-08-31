@@ -64,10 +64,10 @@ export default function Home() {
         </div>
         <div className="relative z-10 text-center px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto fade-in-up">
           <h1 className="font-display-lg text-display-lg text-on-primary mb-6 leading-tight">
-            Precisión en el <br/><span className="text-secondary-fixed">Rendimiento</span>
+            Formamos deportistas, <br/><span className="text-secondary-fixed">Educamos ciudadanos</span>
           </h1>
           <p className="font-body-lg text-body-lg text-surface-variant mb-8 max-w-2xl mx-auto">
-            Eleva tu nivel con entrenamiento de élite, instalaciones de última generación y una comunidad impulsada por la excelencia.
+            Formación integral mediante procesos de entrenamiento de excelencia, promoviendo estilos de vida saludables, el desarrollo humano y el alto rendimiento deportivo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/registro" className="bg-secondary-container text-on-secondary-container font-label-bold text-label-bold px-8 py-4 rounded-xl shadow-[0_4px_14px_rgba(255,133,27,0.39)] hover:shadow-[0_6px_20px_rgba(255,133,27,0.23)] hover:-translate-y-1 transition-all duration-300 inline-block">
@@ -91,9 +91,9 @@ export default function Home() {
               <span className="font-caption text-caption text-secondary uppercase tracking-widest">Quiénes Somos</span>
               <span className="w-8 h-0.5 bg-secondary inline-block" />
             </div>
-            <h2 className="font-headline-lg text-headline-lg text-primary mb-4">Nuestra Filosofía</h2>
+            <h2 className="font-headline-lg text-headline-lg text-primary mb-4">Modelo Integral de Formación 360°</h2>
             <p className="font-body-md text-body-md text-on-surface-variant max-w-3xl mx-auto">
-              Creemos en formar campeonas dentro y fuera de la cancha a través de una dedicación implacable, dominio táctico y acondicionamiento físico.
+              Entendemos que el verdadero éxito deportivo solo es sostenible cuando está respaldado por un adecuado desarrollo humano. Nuestro modelo articula el deporte con la educación en valores y el acompañamiento familiar.
             </p>
           </div>
 
@@ -106,27 +106,28 @@ export default function Home() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary-container/90 to-transparent z-10" />
               <div className="relative z-20">
-                <span className="material-symbols-outlined text-secondary-fixed mb-4 text-[40px]" style={{fontVariationSettings:"'FILL' 1"}}>strategy</span>
-                <h3 className="font-headline-md text-headline-md text-on-primary mb-2">Supremacía Táctica</h3>
-                <p className="font-body-md text-body-md text-surface-variant">Análisis avanzado y regímenes de entrenamiento enfocados en la estrategia diseñados para el juego moderno.</p>
+                <span className="material-symbols-outlined text-secondary-fixed mb-4 text-[40px]" style={{fontVariationSettings:"'FILL' 1"}}>sports_volleyball</span>
+                <h3 className="font-headline-md text-headline-md text-on-primary mb-2">Dimensión Deportiva</h3>
+                <p className="font-body-md text-body-md text-surface-variant">Desarrollo progresivo de capacidades técnicas, tácticas, físicas y estratégicas bajo criterios científicos y metodológicos de excelencia.</p>
               </div>
             </div>
             <div className="bg-surface rounded-2xl p-8 border border-outline-variant shadow-sm hover:shadow-md transition-shadow fade-in-up" style={{transitionDelay:'100ms'}}>
-              <span className="material-symbols-outlined text-primary mb-4 text-[32px]">fitness_center</span>
-              <h3 className="font-label-bold text-label-bold text-primary mb-2 text-lg">Acondicionamiento de Élite</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant text-sm">Programas de fuerza y agilidad de última generación adaptados para el salto vertical y la potencia explosiva.</p>
+              <span className="material-symbols-outlined text-primary mb-4 text-[32px]">school</span>
+              <h3 className="font-label-bold text-label-bold text-primary mb-2 text-lg">Dimensión Académica</h3>
+              <p className="font-body-md text-body-md text-on-surface-variant text-sm">Fomentamos hábitos de estudio y organización de tiempo. El éxito deportivo y académico van siempre de la mano.</p>
             </div>
             <div className="bg-primary-container text-on-primary-container rounded-2xl p-8 flex flex-col justify-center items-center text-center fade-in-up" style={{transitionDelay:'200ms'}}>
-              <span className="font-display-lg text-display-lg text-secondary-fixed mb-2">50+</span>
-              <span className="font-label-bold text-label-bold">Campeonatos Ganados</span>
+              <span className="material-symbols-outlined text-secondary-fixed mb-4 text-[40px]" style={{fontVariationSettings:"'FILL' 1"}}>favorite</span>
+              <h3 className="font-label-bold text-label-bold mb-2 text-lg">Dimensión Humana</h3>
+              <p className="font-body-md text-body-md text-on-primary-container/80 text-sm">Forjando carácter: resiliencia, liderazgo, autocontrol y respeto para la vida adulta.</p>
             </div>
             <div className="md:col-span-2 bg-surface rounded-2xl p-8 border border-outline-variant shadow-sm flex items-center gap-6 fade-in-up" style={{transitionDelay:'300ms'}}>
               <div className="w-16 h-16 rounded-full bg-secondary-container/20 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-secondary-container text-[32px]">groups</span>
+                <span className="material-symbols-outlined text-secondary-container text-[32px]">family_home</span>
               </div>
               <div>
-                <h3 className="font-label-bold text-label-bold text-primary mb-1 text-lg">Comunidad y Cultura</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant text-sm">Únete a una red de atletas apasionadas comprometidas con el crecimiento mutuo y el apoyo.</p>
+                <h3 className="font-label-bold text-label-bold text-primary mb-1 text-lg">Integración Familiar y Social</h3>
+                <p className="font-body-md text-body-md text-on-surface-variant text-sm">La familia como aliado estratégico. Transformamos la comunidad promoviendo estilos de vida saludables y previniendo conductas de riesgo.</p>
               </div>
             </div>
           </div>
@@ -139,19 +140,19 @@ export default function Home() {
                 <span className="font-caption text-caption text-secondary uppercase tracking-widest">Nuestra Historia</span>
               </div>
               <h2 className="font-headline-lg text-headline-lg text-primary mb-6 leading-tight">
-                Un Club Forjado con Pasión por el Voleibol
+                Un Proyecto de Transformación Social
               </h2>
               <p className="font-body-md text-body-md text-on-surface-variant mb-4 leading-relaxed">
-                El Club Pito Pérez Voleibol nació del sueño de crear un espacio donde niñas y jóvenes de Guayaquil puedan desarrollar su máximo potencial en el voleibol, con disciplina, valores y amor por el deporte.
+                El Club Formativo Pito Pérez nace con el firme propósito de contribuir al desarrollo físico, emocional, académico y social de niños, niñas y adolescentes del Austro ecuatoriano. 
               </p>
               <p className="font-body-md text-body-md text-on-surface-variant mb-6 leading-relaxed">
-                Desde nuestros inicios, hemos formado jugadoras que hoy representan a sus colegios, a la provincia y al país. Nuestra metodología combina técnica de alto nivel con desarrollo personal, asegurando que cada jugadora crezca no solo en la cancha, sino también como persona.
+                Más que una escuela de voleibol, somos una organización comprometida con la responsabilidad social. Creemos en el deporte como una inversión para generar oportunidades, alejar a los jóvenes de riesgos y fomentar la igualdad de oportunidades para todos.
               </p>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { valor: '8+', label: 'Años formando atletas' },
-                  { valor: '150+', label: 'Jugadoras egresadas' },
-                  { valor: '3', label: 'Categorías activas' },
+                  { valor: '8 a 17', label: 'Años de edad' },
+                  { valor: '120+', label: 'Deportistas activos' },
+                  { valor: '5', label: 'Categorías (Mini a Sub-18)' },
                 ].map(stat => (
                   <div key={stat.label} className="text-center p-4 bg-surface rounded-xl border border-outline-variant">
                     <div className="font-display-lg text-[32px] text-secondary font-bold leading-none">{stat.valor}</div>
@@ -260,13 +261,13 @@ export default function Home() {
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:-translate-y-2 hover:shadow-lg transition-all duration-300 group fade-in-up">
               <div className="h-48 overflow-hidden relative">
                 <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{backgroundImage:"url('https://lh3.googleusercontent.com/aida-public/AB6AXuAlqxahNtWljiBwI46ZmnYUJG84neqxrSEjrGJvBW-YmSAsFh9TYgr58H6Dc0Wzp269tx5H_ajP1KmtVBp_GpQIvZXQA2Jh7ob2ZyfpYdnfd7nzYwBHzMLDTkvEmL1HEx0fb6h61vGdSBcnTsMaFqyJGzGypxQ6T4FTHItCQQDUihZU98Uwyn0CoTYccoZ5GVoiQSl4VataZ1e4YfYcfjCu30WvNII3sifS2rg63aaaUoLBRHfbXrkm')"}} />
-                <div className="absolute top-4 left-4 bg-surface text-primary px-3 py-1 rounded-full font-caption text-caption">Edades 8-14</div>
+                <div className="absolute top-4 left-4 bg-surface text-primary px-3 py-1 rounded-full font-caption text-caption">Edades 8-12</div>
               </div>
               <div className="p-6">
-                <h3 className="font-headline-md text-headline-md text-primary mb-2">Academia Juvenil</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant mb-6 text-sm">Enfocados en los fundamentos, habilidades motoras y en fomentar el amor por el juego en un ambiente positivo.</p>
+                <h3 className="font-headline-md text-headline-md text-primary mb-2">Mini Vóley & Infantil</h3>
+                <p className="font-body-md text-body-md text-on-surface-variant mb-6 text-sm">Enseñanza progresiva de fundamentos, coordinación motriz y fomento del compañerismo en una etapa biológica crucial.</p>
                 <div className="flex items-center justify-between">
-                  <span className="font-label-bold text-label-bold text-primary">$35/mes</span>
+                  <span className="font-label-bold text-label-bold text-primary">Iniciación</span>
                   <Link to="/registro" className="text-secondary font-label-bold text-label-bold hover:underline">Inscríbete Ahora</Link>
                 </div>
               </div>
@@ -278,14 +279,14 @@ export default function Home() {
               <div className="h-48 overflow-hidden relative">
                 <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500 opacity-80" style={{backgroundImage:"url('https://lh3.googleusercontent.com/aida-public/AB6AXuBCXAYvvvwH2JfsX48kRiRLy97T6PzOxRkzQs2-6gxR0aWt5Fg6v_1bJZYYkYOpBUC3q2QXhOwFTm3AqHqkFBNyUGtKSPrph4_AUqZMvB9u9a2YHOZ9KJI95EYEohzYr3fP7_4q4wmFIvXezqBMoQBKixodfZUB8Mnz9SPmGCI-Z-a6AGUUUD9vnESn_8OjEMmEIrYkb9TZt7_xZq8ZNLGmYB5uYvIJI8ffLbNjrBdl_mLXrcE6sqRH')"}} />
                 <div className="absolute top-4 left-4 bg-tertiary text-on-tertiary px-3 py-1 rounded-full font-caption text-caption flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings:"'FILL' 1"}}>star</span> Nivel Élite
+                  <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings:"'FILL' 1"}}>star</span> Competitivo
                 </div>
               </div>
               <div className="p-6">
-                <h3 className="font-headline-md text-headline-md text-on-primary mb-2">Categoría Competitiva</h3>
-                <p className="font-body-md text-body-md text-surface-variant mb-6 text-sm">Entrenamiento de alta intensidad para atletas competitivas que apuntan a torneos provinciales y nacionales.</p>
+                <h3 className="font-headline-md text-headline-md text-on-primary mb-2">Categorías Juveniles</h3>
+                <p className="font-body-md text-body-md text-surface-variant mb-6 text-sm">Sub-14, Sub-16 y Sub-18. Alta intensidad, sistemas ofensivos y defensivos, con participación en la Liga Nacional FEV.</p>
                 <div className="flex items-center justify-between">
-                  <span className="font-label-bold text-label-bold text-on-primary">$40/mes</span>
+                  <span className="font-label-bold text-label-bold text-on-primary">Alto Rendimiento</span>
                   <Link to="/registro" className="bg-secondary-container text-on-secondary-container px-4 py-2 rounded-lg font-label-bold text-label-bold text-sm hover:bg-secondary hover:text-on-secondary transition-colors inline-block">Aplicar</Link>
                 </div>
               </div>
@@ -295,14 +296,14 @@ export default function Home() {
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:-translate-y-2 hover:shadow-lg transition-all duration-300 group fade-in-up" style={{transitionDelay:'200ms'}}>
               <div className="h-48 overflow-hidden relative">
                 <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{backgroundImage:"url('https://lh3.googleusercontent.com/aida-public/AB6AXuDypaWYWlvNTdKYh9THn4pmy-oSBZo-BTbVDEUarD_GZDjPXVfOYPo8jUVv9KXMj9juHnN8qXY9HB35WD_GsfwUeI34NEqeexzt95guVQ5jLgJd0nWIenEWpFIJ-UoG6hpx50biTYEkvKfoYzbNEwnjpelmvOrNf0t_4ex6MZAfqlMkfRXjIqmHmyrpUL5U6V4mo4C8f7NXxe6l9GblunHR9WXfg-fW_FtUeWYRhjT7OqpgiCcKSw8k')"}} />
-                <div className="absolute top-4 left-4 bg-surface text-primary px-3 py-1 rounded-full font-caption text-caption">Adultos 18+</div>
+                <div className="absolute top-4 left-4 bg-surface text-primary px-3 py-1 rounded-full font-caption text-caption">Participación General</div>
               </div>
               <div className="p-6">
-                <h3 className="font-headline-md text-headline-md text-primary mb-2">Liga Recreativa</h3>
-                <p className="font-body-md text-body-md text-on-surface-variant mb-6 text-sm">Mantente activa, mejora tus habilidades y disfruta del juego competitivo en un entorno estructurado y divertido.</p>
+                <h3 className="font-headline-md text-headline-md text-primary mb-2">Festivales y Torneos</h3>
+                <p className="font-body-md text-body-md text-on-surface-variant mb-6 text-sm">Organizamos encuentros de integración y participamos en más de 8 torneos locales anuales para fortalecer la experiencia competitiva.</p>
                 <div className="flex items-center justify-between">
-                  <span className="font-label-bold text-label-bold text-primary">$30/mes</span>
-                  <Link to="/registro" className="text-secondary font-label-bold text-label-bold hover:underline">Unirse</Link>
+                  <span className="font-label-bold text-label-bold text-primary">Eventos</span>
+                  <Link to="/horarios" className="text-secondary font-label-bold text-label-bold hover:underline">Conoce más</Link>
                 </div>
               </div>
             </div>

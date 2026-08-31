@@ -173,6 +173,12 @@ export default function Footer() {
                   Sobre Nosotros
                 </Link>
               </li>
+              <li>
+                <a href="mailto:contacto@clubpitoperez.com" className="text-slate-300 hover:text-secondary-fixed transition-colors flex items-center gap-1.5 mt-2 font-semibold">
+                  <span className="material-symbols-outlined text-[14px] text-secondary">handshake</span>
+                  Sé nuestro Aliado Estratégico
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -186,29 +192,29 @@ export default function Footer() {
               <li className="text-slate-300 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] text-secondary mt-0.5">sports_volleyball</span>
                 <div>
-                  <span className="font-medium text-white block">Iniciación Infantil (U10 - U12)</span>
+                  <span className="font-medium text-white block">Mini Vóley & Infantil (8-12)</span>
                   <span className="text-xs text-slate-400">Fundamentos y desarrollo motriz</span>
                 </div>
               </li>
               <li className="text-slate-300 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] text-secondary mt-0.5">military_tech</span>
                 <div>
-                  <span className="font-medium text-white block">Formativa Junior (U14 - U16)</span>
+                  <span className="font-medium text-white block">Categorías Juveniles (Sub 14-16)</span>
                   <span className="text-xs text-slate-400">Táctica y perfeccionamiento técnico</span>
                 </div>
               </li>
               <li className="text-slate-300 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] text-secondary mt-0.5">trophy</span>
                 <div>
-                  <span className="font-medium text-white block">Varsity & Alto Rendimiento</span>
-                  <span className="text-xs text-slate-400">Competencia de nivel intercolegial</span>
+                  <span className="font-medium text-white block">Sub-18 y Selección</span>
+                  <span className="text-xs text-slate-400">Competencia en Liga Nacional y Alto Rendimiento</span>
                 </div>
               </li>
               <li className="text-slate-300 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] text-secondary mt-0.5">fitness_center</span>
                 <div>
-                  <span className="font-medium text-white block">Acondicionamiento y Salto</span>
-                  <span className="text-xs text-slate-400">Potencia explosiva y resistencia</span>
+                  <span className="font-medium text-white block">Preparación Física Integral</span>
+                  <span className="text-xs text-slate-400">Fuerza, velocidad, coordinación y potencia</span>
                 </div>
               </li>
             </ul>

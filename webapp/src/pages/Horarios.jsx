@@ -42,24 +42,31 @@ export default function Horarios() {
             <tbody className="text-body-md text-on-surface-variant">
               <tr className="hover:bg-surface-bright transition-colors border-b border-outline-variant">
                 <td className="p-4 font-label-bold text-primary">06:00 AM - 08:00 AM</td>
-                <td className="p-4">Acondicionamiento</td>
+                <td className="p-4">Preparación Física</td>
                 <td className="p-4">-</td>
-                <td className="p-4">Acondicionamiento</td>
+                <td className="p-4">Preparación Física</td>
                 <td className="p-4 text-secondary font-label-bold">Cancha Abierta</td>
               </tr>
               <tr className="hover:bg-surface-bright transition-colors border-b border-outline-variant">
-                <td className="p-4 font-label-bold text-primary">04:00 PM - 06:00 PM</td>
-                <td className="p-4 text-primary-container font-label-bold">Junior Varsity</td>
-                <td className="p-4 text-primary-container font-label-bold">Junior Varsity</td>
-                <td className="p-4">-</td>
-                <td className="p-4">-</td>
+                <td className="p-4 font-label-bold text-primary">04:00 PM - 05:30 PM</td>
+                <td className="p-4 text-primary-container font-label-bold">Mini Vóley & Infantil (8-12)</td>
+                <td className="p-4 text-primary-container font-label-bold">Mini Vóley & Infantil (8-12)</td>
+                <td className="p-4 text-primary-container font-label-bold">Mini Vóley & Infantil (8-12)</td>
+                <td className="p-4">Competencias Locales</td>
+              </tr>
+              <tr className="hover:bg-surface-bright transition-colors border-b border-outline-variant">
+                <td className="p-4 font-label-bold text-primary">05:30 PM - 07:00 PM</td>
+                <td className="p-4 text-tertiary-container font-label-bold">Sub-14 y Sub-16</td>
+                <td className="p-4 text-tertiary-container font-label-bold">Sub-14 y Sub-16</td>
+                <td className="p-4 text-tertiary-container font-label-bold">Sub-14 y Sub-16</td>
+                <td className="p-4">Liga Nacional / Eventos</td>
               </tr>
               <tr className="hover:bg-surface-bright transition-colors">
-                <td className="p-4 font-label-bold text-primary">06:30 PM - 08:30 PM</td>
-                <td className="p-4 text-tertiary-container font-label-bold">Varsity y Élite</td>
-                <td className="p-4 text-tertiary-container font-label-bold">Varsity y Élite</td>
-                <td className="p-4 text-tertiary-container font-label-bold">Varsity y Élite</td>
-                <td className="p-4">Día de Partido</td>
+                <td className="p-4 font-label-bold text-primary">07:00 PM - 08:30 PM</td>
+                <td className="p-4 font-label-bold text-secondary-fixed">Sub-18 y Selección</td>
+                <td className="p-4 font-label-bold text-secondary-fixed">Sub-18 y Selección</td>
+                <td className="p-4 font-label-bold text-secondary-fixed">Sub-18 y Selección</td>
+                <td className="p-4">Preparación Competitiva</td>
               </tr>
             </tbody>
           </table>

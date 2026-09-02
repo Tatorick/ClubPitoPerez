@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import MemberModal from '../components/admin/MemberModal';
 import NewMemberModal from '../components/admin/NewMemberModal';
+import ConfigView from '../components/admin/ConfigView';
 import { derivarEstadoMeses } from '../utils/pagos';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -373,7 +374,7 @@ export default function Admin() {
             <h1 className="text-base md:text-xl font-bold text-gray-800">
               {activeTab === 'pagos'    ? 'Ingresos y Pagos'       : ''}
               {activeTab === 'miembros' ? 'Directorio de Miembros'  : ''}
-              {activeTab === 'config'   ? 'Ajustes'                 : ''}
+              {activeTab === 'config'   ? 'Ajustes del Club'        : ''}
             </h1>
             <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">A\u00f1o lectivo 2024 \u2013 2025</p>
           </div>
@@ -397,12 +398,7 @@ export default function Admin() {
         <div className="p-4 md:p-6">
           {activeTab === 'pagos'    && <PagosView />}
           {activeTab === 'miembros' && <MiembrosView onOpenMember={setSelectedMember} miembros={miembros} loading={loading} />}
-          {activeTab === 'config'   && (
-            <div className="text-gray-500 text-sm p-8 text-center">
-              <span className="material-symbols-outlined text-4xl text-gray-300 block mb-2">settings</span>
-              Configuraci\u00f3n del portal (pr\u00f3ximamente)
-            </div>
-          )}
+          {activeTab === 'config'   && <ConfigView />}
         </div>
       </main>
 

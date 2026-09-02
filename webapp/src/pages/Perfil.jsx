@@ -148,34 +148,35 @@ function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
     setError('');
 
     try {
-      // Base64 fallback si no hay archivo real
-      let comprobante_url = fotoPreview;
-
-      // Subir archivo a Supabase Storage (bucket privado - comprobantes/)
-      if (fotoFile) {
-        const fileExt = fotoFile.name.split('.').pop() || 'jpg';
-        const fileName = `comprobantes/pago-${miembroId || 'atleta'}-${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('fichas')
-          .upload(fileName, fotoFile, { upsert: true });
-
-        if (!uploadError) {
-          // Generar signed URL con 1 año de validez (365 días)
-          // Nota: para mayor seguridad, en el admin se generan signed URLs de corta duración
-          const { data: signedData, error: signErr } = await supabase.storage
-            .from('fichas')
-            .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
-          if (!signErr && signedData?.signedUrl) {
-            comprobante_url = signedData.signedUrl;
-          } else {
-            // Fallback a URL pública si signed URL falla (bucket público)
-            const { data: pubData } = supabase.storage.from('fichas').getPublicUrl(fileName);
-            comprobante_url = pubData.publicUrl;
-          }
-        }
+      // Subir comprobante a Supabase Storage (bucket privado)
+      // IMPORTANTE: El bucket 'fichas' debe ser PRIVADO en el panel de Supabase
+      if (!fotoFile) {
+        throw new Error('No se encontró el archivo del comprobante. Por favor, selecciona la foto nuevamente.');
       }
+
+      const fileExt = fotoFile.name.split('.').pop() || 'jpg';
+      const fileName = `comprobantes/pago-${miembroId || 'atleta'}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('fichas')
+        .upload(fileName, fotoFile, { upsert: true });
+
+      if (uploadError) {
+        throw new Error(`No se pudo subir el comprobante. Verifica tu conexión e intenta nuevamente. (${uploadError.message})`);
+      }
+
+      // Signed URL de 30 días — suficiente para verificación del admin
+      // Nota: El admin puede ver el comprobante en los próximos 30 días.
+      // Si la URL expira, el historial aún muestra el registro del pago.
+      const { data: signedData, error: signErr } = await supabase.storage
+        .from('fichas')
+        .createSignedUrl(fileName, 60 * 60 * 24 * 30); // 30 días
+
+      if (signErr || !signedData?.signedUrl) {
+        throw new Error('El comprobante se subió pero no se pudo generar el enlace de acceso. Contacta al administrador.');
+      }
+
+      const comprobante_url = signedData.signedUrl;
 
       const montoFinal = parseFloat(montoCustom) || montoCalculado;
       const fechaHoy = new Date().toISOString().split('T')[0];

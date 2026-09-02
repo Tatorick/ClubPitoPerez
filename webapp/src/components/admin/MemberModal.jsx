@@ -57,8 +57,43 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
   );
 }
 
+// ─── Badge visual del estado de factura ──────────────────────────────────────
+export function FacturaBadge({ estado, url_ride, onReintentar }) {
+  if (!estado || estado === 'pendiente') return null;
+
+  const configs = {
+    procesando: { bg: 'bg-amber-50 border-amber-200 text-amber-700', icon: 'progress_activity', label: 'Procesando...', spin: true },
+    autorizada:  { bg: 'bg-green-50 border-green-200 text-green-700', icon: 'check_circle', label: 'Factura autorizada', spin: false },
+    rechazada:   { bg: 'bg-red-50 border-red-200 text-red-700',       icon: 'cancel', label: 'Rechazada por SRI', spin: false },
+  };
+  const c = configs[estado] || configs.procesando;
+
+  return (
+    <div className={`flex items-center gap-2 mt-1 flex-wrap`}>
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${c.bg}`}>
+        <span className={`material-symbols-outlined text-[12px] ${c.spin ? 'animate-spin' : ''}`}>{c.icon}</span>
+        {c.label}
+      </span>
+      {estado === 'autorizada' && url_ride && (
+        <a href={url_ride} target="_blank" rel="noreferrer"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-600 text-white hover:bg-green-700 transition-colors">
+          <span className="material-symbols-outlined text-[12px]">download</span>
+          Descargar PDF
+        </a>
+      )}
+      {estado === 'rechazada' && onReintentar && (
+        <button onClick={onReintentar}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white hover:bg-red-700 transition-colors">
+          <span className="material-symbols-outlined text-[12px]">refresh</span>
+          Reintentar
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Formulario de Registro de Pago ──────────────────────────────────────────
-function RegisterPaymentForm({ mesesStatus, onSave, onClose }) {
+function RegisterPaymentForm({ mesesStatus, onSave, onClose, miembro }) {
   const fileRef = useRef(null);
   const [preview, setPreview] = useState(null);
   const [fecha, setFecha] = useState(() => {
@@ -68,6 +103,9 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose }) {
   const [notas, setNotas] = useState('');
   const [montoReal, setMontoReal] = useState('');
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
+  // Factura electrónica: pre-marcar si el miembro tiene datos de facturación
+  const tieneDatosFacturacion = !!(miembro?.facturacion_ruc && miembro?.facturacion_nombre);
+  const [emitirFactura, setEmitirFactura] = useState(tieneDatosFacturacion);
 
   // Solo mostrar meses que NO están pagados ni adelantados
   const mesesDisponibles = mesesStatus.filter(m => !['pagado', 'adelanto'].includes(m.estado));
@@ -101,6 +139,8 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose }) {
       notas,
       comprobante_url: preview,
       meses_cubiertos: mesesSeleccionados,
+      estado_factura: emitirFactura ? 'procesando' : 'pendiente',
+      _emitirFactura: emitirFactura, // Flag interno, no va a la BD
     });
   };
 
@@ -203,6 +243,26 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose }) {
               <p className="text-xs text-gray-400 mt-1">Opcional — pero recomendado para respaldo.</p>
             </div>
 
+            {/* ── Factura electrónica ── */}
+            <div className="border-t border-gray-100 pt-4">
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${emitirFactura ? 'border-[#001f3f] bg-[#001f3f]/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input type="checkbox" checked={emitirFactura}
+                  onChange={e => setEmitirFactura(e.target.checked)}
+                  className="mt-0.5 accent-[#001f3f] w-4 h-4 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[18px] text-[#001f3f]">receipt_long</span>
+                    Emitir factura electrónica SRI
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {tieneDatosFacturacion
+                      ? `Se facturará a: ${miembro?.facturacion_nombre} · ${miembro?.facturacion_ruc}`
+                      : '⚠ El miembro no tiene datos de facturación completos (RUC/cédula y nombre).'}
+                  </p>
+                </div>
+              </label>
+            </div>
+
             {/* Notas */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Notas <span className="font-normal text-gray-400">(opcional)</span></label>
@@ -246,6 +306,9 @@ function PagosTab({ member, onUpdateMember }) {
   const montoVencido = mesesStatus.filter(m => m.estado === 'vencido').reduce((s, m) => s + m.montoPension, 0);
 
   const handleSavePago = async (nuevaTxn) => {
+    const emitirFactura = nuevaTxn._emitirFactura;
+    delete nuevaTxn._emitirFactura; // Limpiar flag interno
+
     try {
       if (member.id && !member.id.startsWith('demo-')) {
         const { data: dbTxn, error: tErr } = await supabase.from('transacciones').insert({
@@ -255,10 +318,38 @@ function PagosTab({ member, onUpdateMember }) {
           notas: nuevaTxn.notas,
           comprobante_url: nuevaTxn.comprobante_url,
           meses_cubiertos: nuevaTxn.meses_cubiertos,
+          estado_factura: emitirFactura ? 'procesando' : 'pendiente',
         }).select().single();
 
         if (tErr) console.error('Error guardando transaccion en Supabase:', tErr);
-        if (dbTxn) nuevaTxn = dbTxn;
+        if (dbTxn) {
+          nuevaTxn = dbTxn;
+
+          // ── Emitir factura electrónica si el admin lo solicitó ──────────────
+          if (emitirFactura) {
+            try {
+              const res = await fetch('/api/emitir-factura', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  transaccion_id: dbTxn.id,
+                  miembro_id: member.id,
+                }),
+              });
+              const facturaRes = await res.json();
+              if (!res.ok) {
+                console.warn('Factura no emitida:', facturaRes.error);
+                // Actualizar estado en la transacción guardada
+                nuevaTxn = { ...nuevaTxn, estado_factura: 'rechazada' };
+              } else {
+                nuevaTxn = { ...nuevaTxn, estado_factura: 'procesando', factura_id: facturaRes.factura_id };
+              }
+            } catch (err) {
+              console.error('Error llamando a emitir-factura:', err);
+              nuevaTxn = { ...nuevaTxn, estado_factura: 'rechazada' };
+            }
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -270,6 +361,30 @@ function PagosTab({ member, onUpdateMember }) {
     };
     if (onUpdateMember) onUpdateMember(updatedMember);
     setRegisterOpen(false);
+  };
+
+  // ── Reintentar factura rechazada ────────────────────────────────────────────
+  const handleReintentarFactura = async (txn) => {
+    if (!member.id || !txn.id) return;
+    try {
+      const res = await fetch('/api/emitir-factura', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transaccion_id: txn.id, miembro_id: member.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Optimistic update: marcar como procesando en la UI
+        const updatedTxns = (member.transacciones || []).map(t =>
+          t.id === txn.id ? { ...t, estado_factura: 'procesando' } : t
+        );
+        if (onUpdateMember) onUpdateMember({ ...member, transacciones: updatedTxns });
+      } else {
+        alert(`No se pudo reintentar la factura: ${data.error}`);
+      }
+    } catch (err) {
+      alert(`Error al reintentar: ${err.message}`);
+    }
   };
 
   const handleCellClick = (mes) => {
@@ -373,25 +488,33 @@ function PagosTab({ member, onUpdateMember }) {
         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Historial de Transacciones</h4>
         <div className="space-y-2">
           {(member.transacciones || []).map(txn => (
-            <div key={txn.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#001f3f]/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px] text-[#001f3f]">receipt_long</span>
+            <div key={txn.id} className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#001f3f]/10 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[16px] text-[#001f3f]">receipt_long</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{txn.meses_cubiertos?.join(' + ')}</p>
+                    <p className="text-xs text-gray-400">{txn.fecha_pago}{txn.notas ? ` · ${txn.notas}` : ''}</p>
+                    {/* Badge estado factura */}
+                    <FacturaBadge
+                      estado={txn.estado_factura}
+                      url_ride={txn.facturas?.url_ride}
+                      onReintentar={() => handleReintentarFactura(txn)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{txn.meses_cubiertos?.join(' + ')}</p>
-                  <p className="text-xs text-gray-400">{txn.fecha_pago}{txn.notas ? ` · ${txn.notas}` : ''}</p>
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-gray-800">${Number(txn.monto_real).toFixed(2)}</p>
+                  {txn.comprobante_url && (
+                    <button
+                      onClick={() => setReceiptOpen({ transaccion: txn, mesCodigo: txn.meses_cubiertos[0] })}
+                      className="text-[10px] text-blue-600 hover:underline">
+                      Ver comprobante
+                    </button>
+                  )}
                 </div>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-800">${Number(txn.monto_real).toFixed(2)}</p>
-                {txn.comprobante_url && (
-                  <button
-                    onClick={() => setReceiptOpen({ transaccion: txn, mesCodigo: txn.meses_cubiertos[0] })}
-                    className="text-[10px] text-blue-600 hover:underline">
-                    Ver comprobante
-                  </button>
-                )}
               </div>
             </div>
           ))}
@@ -420,6 +543,7 @@ function PagosTab({ member, onUpdateMember }) {
       {registerOpen && (
         <RegisterPaymentForm
           mesesStatus={mesesStatus}
+          miembro={member}
           onSave={handleSavePago}
           onClose={() => setRegisterOpen(false)}
         />

@@ -15,6 +15,14 @@ dist/
 dist-ssr/
 *.local
 
+# ── SEGURIDAD: Archivos de entorno con credenciales ───────────────────────────
+# Nunca subir archivos .env con claves reales al repositorio
+.env
+.env.local
+.env.production
+.env.staging
+.env.*.local
+
 # Editor & OS files
 .vscode/
 .idea/

@@ -2,30 +2,38 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BLOG_POSTS, CATEGORIAS } from '../data/blogData';
 import { ALBUMES } from '../data/galeriaData';
+import heroImg from '../assets/hero1.JPG';
+import kevinImg from '../assets/Kevin.JPG';
+import marcosImg from '../assets/Marcos.JPG';
 
 // ── Entrenadores del Club ──────────────────────────────────────────────────────
-const ENTRENADORES = [
+// Las fotos se asignan en el componente (después de los imports) para poder usar las variables importadas
+const ENTRENADORES_BASE = [
   {
     nombre: 'Kevin Culcay',
     rol: 'Entrenador Principal',
-    certificacion: 'FIV 1',
+    certificacion: 'FIVB 1',
     iniciales: 'KC',
     accentColor: 'bg-secondary',
     bio: 'Entrenador certificado FIV nivel 1 con amplia experiencia en competencias nacionales. Lidera el desarrollo técnico y táctico de las categorías mayores del Club Pito Pérez. Especialista en formación de jugadoras de alto rendimiento.',
     especialidades: ['Táctica Avanzada', 'Categorías U14–U16', 'Alto Rendimiento'],
     icon: 'military_tech',
+    fotoKey: 'kevin',
   },
   {
     nombre: 'Marcos Pérez',
     rol: 'Entrenador Principal Infantil',
-    certificacion: 'FIV 3',
+    certificacion: 'FIVB 3',
     iniciales: 'MP',
     accentColor: 'bg-blue-500',
     bio: 'Entrenador certificado FIV nivel 3 con pasión por el desarrollo formativo. Responsable de las categorías infantiles y la iniciación al voleibol de alta calidad. Enfocado en los fundamentos técnicos y el amor por el deporte.',
     especialidades: ['Formación Base', 'Categorías U10–U12', 'Técnica Fundamental'],
     icon: 'sports_volleyball',
+    fotoKey: 'marcos',
   },
 ];
+
+const FOTOS_ENTRENADORES = { kevin: kevinImg, marcos: marcosImg };
 
 export default function Home() {
   useEffect(() => {
@@ -46,6 +54,8 @@ export default function Home() {
   const previewPosts = BLOG_POSTS.slice(0, 3);
   // Primer álbum para preview
   const previewAlbum = ALBUMES[0];
+  // Entrenadores con fotos reales
+  const ENTRENADORES = ENTRENADORES_BASE.map(c => ({ ...c, foto: FOTOS_ENTRENADORES[c.fotoKey] }));
 
   return (
     <div className="bg-background text-on-background font-body-md overflow-x-hidden">
@@ -54,9 +64,9 @@ export default function Home() {
       <header className="relative w-full min-h-[100svh] sm:min-h-0 sm:h-[700px] md:h-[870px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxPZXbvzxQ6w8RgzYnzNcibUivdriJ72Blq3FJUo013R9NARmiIG9cDjOmftN6Zs7Cbxgw861_ilgH48dLGa18j2dCn4or3_xnZ2Xrf1APyaOw859j2hE2tBzBibPD1ejZW7ZrNPt9daXq4BWozQ1SO8VnJ8rTQWrHsXPi4siIw0CyoNzih8I1_Af5Y7DSa4bgRHl6C3rHCtJsa5uFKF-765ZiktuLGH-sakhe1YM81xTuAIx7HErE"
+            src={heroImg}
             alt="Jugadoras de voleibol del Club Pito Pérez"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
             fetchPriority="high"
             decoding="async"
           />
@@ -101,8 +111,8 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(250px,auto)] mb-20">
             <div className="md:col-span-2 glass-panel rounded-2xl p-8 flex flex-col justify-end relative overflow-hidden group fade-in-up">
               <div
-                className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-50 transition-opacity duration-500 z-0"
-                style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBx81IZApdAUiyXX8DKZjW1G_P-Hfbd9c8s6R4FK8YxEEmf19zuFvRAIHDvMpKCVqMg5BKdi9ZBOxl7auF9TFwGx6vHon2Szi6FLTu8fxKEUpcueywPG2qOWlWak5eUsjmEv0FXjJHSkSpp8cjM76ytwbjWvayglTuU1xz0q9DSGwvabmdnJ3pKpgWXkalw1tblEeUQ1DOQnf9aogs8oYAUjoyetwwWtxNsQr7n4g2pyIX1K7urXOz5')"}}
+                className="absolute inset-0 bg-cover bg-center opacity-50 group-hover:opacity-65 transition-opacity duration-500 z-0"
+                style={{backgroundImage: "url('/galeria/IMG_3135.JPG')"}}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary-container/90 to-transparent z-10" />
               <div className="relative z-20">
@@ -201,9 +211,17 @@ export default function Home() {
                     {/* Avatar + nombre */}
                     <div className="flex items-start gap-5 mb-6">
                       <div className="relative shrink-0">
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg border-4 border-white/10 ${coach.accentColor}`}>
-                          {coach.iniciales}
-                        </div>
+                        {coach.foto ? (
+                          <img
+                            src={coach.foto}
+                            alt={`Foto de ${coach.nombre}`}
+                            className={`w-20 h-20 rounded-full object-cover object-top shadow-lg border-4 border-white/10`}
+                          />
+                        ) : (
+                          <div className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg border-4 border-white/10 ${coach.accentColor}`}>
+                            {coach.iniciales}
+                          </div>
+                        )}
                         <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-md">
                           <span className="material-symbols-outlined text-primary text-[16px]" style={{fontVariationSettings:"'FILL' 1"}}>
                             {coach.icon}

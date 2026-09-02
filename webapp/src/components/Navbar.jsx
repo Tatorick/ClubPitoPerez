@@ -38,12 +38,12 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className={`sticky top-0 z-50 flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-20 bg-surface dark:bg-primary border-b border-outline-variant transition-all duration-300 ${isScrolled ? 'shadow-md' : 'shadow-sm'}`}>
+      <nav className={`sticky top-0 z-50 flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-20 bg-surface transition-all duration-300 ${isScrolled ? 'border-b border-outline-variant shadow-md' : 'border-b border-transparent shadow-none'}`}>
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
             <img alt="Pito Pérez Voleibol Club Logo" className="h-12 md:h-16 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-gGkzly7uISZFSdfCQ1t29d4cPhaUkWyRZNzI5Hab5W6b7u3aV1QhtzLhA39R2yxtiFf2fhDs7fjw3N7i2SVL28PXAMOgnBo15oAvtqfmB9WU7jYSk09mVBZhdJT2PNe5WVp_QaqTmL_ibrTd44bdJpk5rXQK04QSZ0jynH-k91ybxPhy-bkVNQVDpLm6eQ2dZ_42ZkbdCdgw_MBKJSwux0vKOaL3SA4he4v7-Q6Ykoie4BhTvVdYNdCBl-kQEfXg7w" />
-            <div className="hidden md:flex flex-col text-primary dark:text-on-primary ml-2 leading-tight justify-center">
+            <div className="hidden md:flex flex-col text-primary ml-2 leading-tight justify-center">
               <span className="font-caption text-[10px] text-secondary uppercase tracking-[0.2em] font-bold">Club</span>
               <span className="text-headline-md font-headline-md font-bold -mt-1">Pito Pérez</span>
             </div>
@@ -59,7 +59,7 @@ export default function Navbar() {
                 className={`font-body-md transition-colors duration-200 ${
                   location.pathname === link.path
                     ? 'text-secondary font-bold border-b-2 border-secondary pb-1'
-                    : 'text-on-surface-variant dark:text-primary-fixed-dim hover:text-primary'
+                    : 'text-on-surface-variant hover:text-primary'
                 }`}
               >
                 {link.name}

@@ -1,4 +1,11 @@
-export const DEMO_HOY = { mes: 'MAY', anioMes: 4, anio: 2025 }; // mes 0-indexed
+// ── Fecha actual real del sistema (no hardcodeada) ─────────────────────────────
+// Se evalúa cada vez que se carga el módulo para siempre usar la fecha correcta.
+const _fechaHoy = new Date();
+export const DEMO_HOY = {
+  mes:     _fechaHoy.toLocaleString('es-EC', { month: 'short' }).toUpperCase().replace('.', ''),
+  anioMes: _fechaHoy.getMonth(),   // 0-indexed (0=Ene, 8=Sep, etc.)
+  anio:    _fechaHoy.getFullYear(),
+};
 
 export const PENSION_ESTANDAR = 55.00;
 export const MATRICULA_ESTANDAR = 50.00;

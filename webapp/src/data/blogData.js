@@ -30,7 +30,7 @@ export const BLOG_POSTS = [
     categoria: 'tecnica',
     fecha: '10 de Agosto, 2025',
     autor: 'Kevin Culcay',
-    imagen: 'https://images.unsplash.com/photo-1592656094267-764a45160876?w=800&q=80',
+    imagen: '/galeria/ejerciciosparaataque.jpg',
     extracto: 'Descubre los mejores ejercicios pliométricos y de técnica para incrementar tu salto vertical y la potencia de tus remates.',
     contenido: [
       'El ataque es una de las habilidades más espectaculares y decisivas en el voleibol. Para ser un buen atacante, no solo necesitas fuerza, sino también una técnica depurada y un salto explosivo.',
@@ -48,7 +48,7 @@ export const BLOG_POSTS = [
     categoria: 'tecnica',
     fecha: '5 de Agosto, 2025',
     autor: 'Marcos Pérez',
-    imagen: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=800&q=80',
+    imagen: '/galeria/Rotaciones.jpg',
     extracto: 'El sistema 5-1 es el más utilizado en el voleibol competitivo. Aprende cómo funciona y cuáles son los roles de cada jugadora en la cancha.',
     contenido: [
       'Entender los sistemas de juego es fundamental cuando pasas del voleibol formativo al competitivo. Hoy hablaremos del sistema 5-1, el más popular a nivel mundial.',

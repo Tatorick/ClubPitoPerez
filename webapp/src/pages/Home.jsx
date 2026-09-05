@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { BLOG_POSTS, CATEGORIAS } from '../data/blogData';
 import { ALBUMES } from '../data/galeriaData';
 import heroImg from '../assets/hero1.JPG';
@@ -50,10 +51,41 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  // Últimos 3 posts para preview
-  const previewPosts = BLOG_POSTS.slice(0, 3);
-  // Primer álbum para preview
-  const previewAlbum = ALBUMES[0];
+  const [previewPosts, setPreviewPosts] = useState(BLOG_POSTS.slice(0, 3));
+  const [previewAlbum, setPreviewAlbum] = useState(ALBUMES[0]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch posts
+        const { data: posts } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('publicado', true)
+          .order('created_at', { ascending: false })
+          .limit(3);
+        
+        if (posts && posts.length > 0) {
+          setPreviewPosts(posts);
+        }
+
+        // Fetch album
+        const { data: albumes } = await supabase
+          .from('galeria_albumes')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (albumes && albumes.length > 0) {
+          setPreviewAlbum(albumes[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching data from Supabase for Home preview', err);
+      }
+    }
+    fetchData();
+  }, []);
+
   // Entrenadores con fotos reales
   const ENTRENADORES = ENTRENADORES_BASE.map(c => ({ ...c, foto: FOTOS_ENTRENADORES[c.fotoKey] }));
 
@@ -361,7 +393,7 @@ export default function Home() {
                   style={{ transitionDelay: `${i * 80}ms` }}
                 >
                   <div className="relative h-48 overflow-hidden">
-                    <img src={post.imagen} alt={post.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src={post.imagen_url || post.imagen} alt={post.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                     <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold border ${cat.bg}`}>{cat.label}</span>
                   </div>
@@ -399,7 +431,7 @@ export default function Home() {
               </div>
               <h2 className="font-headline-lg text-headline-lg text-on-primary">Galería Multimedia</h2>
               <p className="font-body-md text-body-md text-on-primary-container/70 mt-2">
-                {previewAlbum.titulo} · {previewAlbum.fotos.length} fotos
+                {previewAlbum.titulo} · {(previewAlbum.fotos_urls || previewAlbum.fotos || []).length} fotos
               </p>
             </div>
             <Link
@@ -416,21 +448,21 @@ export default function Home() {
             {/* Foto grande */}
             <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden group cursor-pointer relative">
               <img
-                src={previewAlbum.fotos[0].url}
+                src={(previewAlbum.fotos_urls || [])[0] || (previewAlbum.fotos || [])[0]?.url}
                 alt={previewAlbum.titulo}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
               <div className="absolute bottom-4 left-4">
-                <span className="bg-secondary text-white px-3 py-1 rounded-full text-xs font-bold">🥇 1er Lugar</span>
+                <span className="bg-secondary text-white px-3 py-1 rounded-full text-xs font-bold">🥇 Reciente</span>
               </div>
             </div>
             {/* 4 fotos pequeñas */}
-            {previewAlbum.fotos.slice(1, 5).map((foto, i) => (
-              <div key={foto.id} className="rounded-xl overflow-hidden group cursor-pointer relative">
+            {(previewAlbum.fotos_urls || previewAlbum.fotos || []).slice(1, 5).map((foto, i) => (
+              <div key={foto.id || i} className="rounded-xl overflow-hidden group cursor-pointer relative">
                 <img
-                  src={foto.thumb}
-                  alt={foto.titulo}
+                  src={foto.thumb || foto}
+                  alt={foto.titulo || 'Foto de galeria'}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
@@ -438,7 +470,7 @@ export default function Home() {
                 {i === 3 && (
                   <Link to="/galeria" className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white text-center">
                     <span className="material-symbols-outlined text-3xl mb-1">add_circle</span>
-                    <span className="text-xs font-bold">+{previewAlbum.fotos.length - 5} más</span>
+                    <span className="text-xs font-bold">+{(previewAlbum.fotos_urls || previewAlbum.fotos || []).length - 5} más</span>
                   </Link>
                 )}
               </div>

@@ -10,6 +10,7 @@ const Home     = lazy(() => import('./pages/Home'));
 const Horarios = lazy(() => import('./pages/Horarios'));
 const Perfil   = lazy(() => import('./pages/Perfil'));
 const Admin    = lazy(() => import('./pages/Admin'));
+const Editor   = lazy(() => import('./pages/Editor'));
 const Login    = lazy(() => import('./pages/Login'));
 const Registro = lazy(() => import('./pages/Registro'));
 const Blog     = lazy(() => import('./pages/Blog'));
@@ -31,7 +32,7 @@ function PageLoader() {
 
 function AppContent() {
   const location = useLocation();
-  const isNoLayout = location.pathname.startsWith('/admin') || location.pathname === '/login' || location.pathname === '/registro';
+  const isNoLayout = location.pathname.startsWith('/admin') || location.pathname.startsWith('/editor') || location.pathname === '/login' || location.pathname === '/registro';
 
   useEffect(() => {
     if (location.hash) {
@@ -48,7 +49,7 @@ function AppContent() {
   }, [location]);
 
   return (
-    <div className={`flex flex-col min-h-screen ${location.pathname.startsWith('/admin') ? 'h-screen overflow-hidden' : ''}`}>
+    <div className={`flex flex-col min-h-screen ${(location.pathname.startsWith('/admin') || location.pathname.startsWith('/editor')) ? 'h-screen overflow-hidden' : ''}`}>
       {!isNoLayout && <Navbar />}
       <main className="flex-grow">
         <Suspense fallback={<PageLoader />}>
@@ -77,6 +78,16 @@ function AppContent() {
               element={
                 <ProtectedRoute adminOnly>
                   <Admin />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ruta de editor — requiere sesión + rol admin o editor */}
+            <Route
+              path="/editor"
+              element={
+                <ProtectedRoute editorOnly>
+                  <Editor />
                 </ProtectedRoute>
               }
             />

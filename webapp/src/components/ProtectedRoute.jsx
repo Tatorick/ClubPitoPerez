@@ -12,8 +12,8 @@ import { useAuth } from '../context/AuthContext';
  * Si no hay sesión, redirige a /login conservando la URL original
  * (para redirigir de vuelta después del login).
  */
-export default function ProtectedRoute({ children, adminOnly = false }) {
-  const { user, loading, isAdmin } = useAuth();
+export default function ProtectedRoute({ children, adminOnly = false, editorOnly = false }) {
+  const { user, loading, isAdmin, isEditor } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -36,6 +36,11 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
   // Ruta solo para admin, pero el usuario no es admin → al inicio
   if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Ruta solo para editores (admin + encargada de redes), pero no lo es → al inicio
+  if (editorOnly && !isEditor) {
     return <Navigate to="/" replace />;
   }
 

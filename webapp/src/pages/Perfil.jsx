@@ -6,11 +6,13 @@ import { derivarEstadoMeses } from '../utils/pagos';
 
 // ── Config de estilos por estado de mes ───────────────────────────────────────
 const ESTADO_CONFIG = {
-  pagado:    { bg: 'bg-green-50',   border: 'border-green-300',  icon: 'check_circle',   iconColor: 'text-green-600',  label: 'Pagado',    textColor: 'text-green-700' },
-  adelanto:  { bg: 'bg-blue-50',    border: 'border-blue-300',   icon: 'schedule_send',  iconColor: 'text-blue-600',   label: 'Adelanto',  textColor: 'text-blue-700' },
-  pendiente: { bg: 'bg-amber-50',   border: 'border-amber-300',  icon: 'schedule',       iconColor: 'text-amber-500',  label: 'Pendiente', textColor: 'text-amber-700' },
-  vencido:   { bg: 'bg-red-50',     border: 'border-red-300',    icon: 'warning',        iconColor: 'text-red-500',    label: 'Vencido',   textColor: 'text-red-700' },
-  futuro:    { bg: 'bg-gray-50',    border: 'border-gray-200',   icon: 'remove',         iconColor: 'text-gray-300',   label: 'Futuro',    textColor: 'text-gray-400' },
+  pagado:          { bg: 'bg-green-50',   border: 'border-green-300',  icon: 'check_circle',   iconColor: 'text-green-600',  label: 'Pagado',            textColor: 'text-green-700' },
+  adelanto:        { bg: 'bg-blue-50',    border: 'border-blue-300',   icon: 'schedule_send',  iconColor: 'text-blue-600',   label: 'Adelanto',          textColor: 'text-blue-700' },
+  pendiente:       { bg: 'bg-amber-50',   border: 'border-amber-300',  icon: 'schedule',       iconColor: 'text-amber-500',  label: 'Pendiente',         textColor: 'text-amber-700' },
+  vencido:         { bg: 'bg-red-50',     border: 'border-red-300',    icon: 'warning',        iconColor: 'text-red-500',    label: 'Vencido',           textColor: 'text-red-700' },
+  futuro:          { bg: 'bg-gray-50',    border: 'border-gray-200',   icon: 'remove',         iconColor: 'text-gray-300',   label: 'Futuro',            textColor: 'text-gray-400' },
+  en_verificacion: { bg: 'bg-orange-50',  border: 'border-orange-300', icon: 'hourglass_top',  iconColor: 'text-orange-500', label: 'En verificación',   textColor: 'text-orange-700' },
+  rechazado:       { bg: 'bg-rose-50',    border: 'border-rose-400',   icon: 'cancel',         iconColor: 'text-rose-600',   label: 'Rechazado',         textColor: 'text-rose-700' },
 };
 
 // ── Modal para Ver Comprobante ────────────────────────────────────────────────
@@ -191,6 +193,7 @@ function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
           notas: notasCustom ? notasCustom : `Comprobante subido por representante (${mesesSeleccionados.join(', ')})`,
           comprobante_url: comprobante_url,
           meses_cubiertos: mesesSeleccionados,
+          estado_verificacion: 'pendiente_verificacion',
         })
         .select()
         .single();
@@ -484,8 +487,8 @@ export default function Perfil() {
   const handlePaymentSuccess = (newTxn) => {
     setShowUploadModal(false);
     setTransacciones(prev => [...prev, newTxn]);
-    setNotification('¡Comprobante de pago enviado con éxito! El administrador ya puede verificarlo.');
-    setTimeout(() => setNotification(''), 6000);
+    setNotification('¡Comprobante enviado con éxito! El administrador verificará tu pago en breve y te confirmará su aprobación.');
+    setTimeout(() => setNotification(''), 8000);
     loadAthleteData();
   };
 
@@ -498,6 +501,7 @@ export default function Perfil() {
   const mesesStatus = derivarEstadoMeses(transacciones, montoPension);
   const mesesPagadosCount = mesesStatus.filter(m => ['pagado', 'adelanto'].includes(m.estado)).length;
   const mesesPendientesCount = mesesStatus.filter(m => m.estado === 'pendiente' || m.estado === 'vencido').length;
+  const mesesEnVerificacionCount = mesesStatus.filter(m => m.estado === 'en_verificacion').length;
 
   // Datos dinámicos del deportista
   const nombreCompleto = fichaData?.nombres_jugador || miembroData?.nombres || user?.user_metadata?.nombre || 'Deportista';
@@ -663,6 +667,9 @@ export default function Perfil() {
                     <span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Vencido
                   </span>
                   <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-400" /> En verificación
+                  </span>
+                  <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-gray-300" /> Futuro
                   </span>
                 </div>
@@ -677,16 +684,19 @@ export default function Perfil() {
                 {mesesStatus.map(mes => {
                   const c = ESTADO_CONFIG[mes.estado] || ESTADO_CONFIG.futuro;
                   const isPaid = ['pagado', 'adelanto'].includes(mes.estado);
+                  const isEnVerif = mes.estado === 'en_verificacion';
+                  const isRechazado = mes.estado === 'rechazado';
+                  const isClickable = isPaid || isEnVerif || isRechazado;
                   const hasReceipt = mes.transaccion?.comprobante_url;
 
                   return (
                     <div
                       key={mes.codigo}
-                      onClick={() => isPaid && mes.transaccion && setReceiptModal({ transaccion: mes.transaccion, mesCodigo: mes.codigo })}
+                      onClick={() => isClickable && mes.transaccion && setReceiptModal({ transaccion: mes.transaccion, mesCodigo: mes.codigo })}
                       className={`border-2 rounded-xl p-3 flex flex-col items-center justify-between min-h-[95px] transition-all select-none ${c.bg} ${c.border} ${
-                        isPaid ? 'cursor-pointer hover:scale-105 hover:shadow-md' : 'cursor-default opacity-85'
+                        isClickable ? 'cursor-pointer hover:scale-105 hover:shadow-md' : 'cursor-default opacity-85'
                       }`}
-                      title={isPaid ? (hasReceipt ? 'Ver comprobante adjunto' : 'Pagado registrado') : `Estado: ${c.label}`}
+                      title={isClickable ? (hasReceipt ? 'Ver comprobante adjunto' : 'Pago registrado') : `Estado: ${c.label}`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="font-bold text-gray-800 text-sm">{mes.codigo}</span>
@@ -698,10 +708,22 @@ export default function Perfil() {
                         <span className={`block text-[10px] font-bold ${c.textColor}`}>{c.label}</span>
                       </div>
 
+                      {isEnVerif && (
+                        <span className="text-[9px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-300 flex items-center gap-0.5 animate-pulse">
+                          <span className="material-symbols-outlined text-[10px]">hourglass_top</span>
+                          Verificando
+                        </span>
+                      )}
                       {isPaid && (
                         <span className="text-[9px] font-semibold text-blue-700 bg-white/80 px-1.5 py-0.5 rounded border border-blue-200 flex items-center gap-0.5">
                           <span className="material-symbols-outlined text-[10px]">receipt</span>
                           Ver
+                        </span>
+                      )}
+                      {isRechazado && (
+                        <span className="text-[9px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 flex items-center gap-0.5">
+                          <span className="material-symbols-outlined text-[10px]">cancel</span>
+                          Rechazado
                         </span>
                       )}
                     </div>

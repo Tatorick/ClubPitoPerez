@@ -56,6 +56,16 @@ export function derivarEstadoMeses(transacciones, montoPensionCustom, montoMatri
     const valorCuota = mes.tipo === 'matricula' ? montoMatricula : montoPension;
 
     if (txn) {
+      // Si el pago está pendiente de verificación por el admin
+      if (txn.estado_verificacion === 'pendiente_verificacion') {
+        return { ...mes, montoPension: valorCuota, estado: 'en_verificacion', transaccion: txn };
+      }
+      // Si el admin rechazó el comprobante, el mes vuelve a su estado original
+      if (txn.estado_verificacion === 'rechazado') {
+        if (esPasado)  return { ...mes, montoPension: valorCuota, estado: 'rechazado', transaccion: txn };
+        if (esActual)  return { ...mes, montoPension: valorCuota, estado: 'rechazado', transaccion: txn };
+        return           { ...mes, montoPension: valorCuota, estado: 'rechazado', transaccion: txn };
+      }
       const estado = esFuturo ? 'adelanto' : 'pagado';
       return { ...mes, montoPension: valorCuota, estado, transaccion: txn };
     }

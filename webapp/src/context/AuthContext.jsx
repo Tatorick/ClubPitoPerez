@@ -13,6 +13,12 @@ const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean);
 
+// Emails con acceso al editor de contenido (blog + galería)
+const EDITOR_EMAILS = (import.meta.env.VITE_EDITOR_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
 // Advertencia en consola durante desarrollo para recordar configurar RLS
 if (import.meta.env.DEV && ADMIN_EMAILS.length > 0) {
   console.warn(
@@ -26,7 +32,8 @@ if (import.meta.env.DEV && ADMIN_EMAILS.length > 0) {
   );
 }
 
-const isAdminEmail = (email) => ADMIN_EMAILS.includes(email?.toLowerCase());
+const isAdminEmail  = (email) => ADMIN_EMAILS.includes(email?.toLowerCase());
+const isEditorEmail = (email) => EDITOR_EMAILS.includes(email?.toLowerCase());
 
 // ── Contexto de Autenticación con Supabase ─────────────────────────────────────
 export const AuthContext = createContext(null);
@@ -35,6 +42,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isEditor, setIsEditor] = useState(false); // admin también es editor
 
   useEffect(() => {
     // Si Supabase no está configurado, simplemente no hay sesión
@@ -47,6 +55,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setIsAdmin(isAdminEmail(session?.user?.email));
+      setIsEditor(isAdminEmail(session?.user?.email) || isEditorEmail(session?.user?.email));
       setLoading(false);
     }).catch(() => {
       setLoading(false);
@@ -56,6 +65,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setIsAdmin(isAdminEmail(session?.user?.email));
+      setIsEditor(isAdminEmail(session?.user?.email) || isEditorEmail(session?.user?.email));
       setLoading(false);
     });
 
@@ -75,7 +85,7 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   };
 
-  const value = { user, loading, login, logout, isAdmin, supabaseReady };
+  const value = { user, loading, login, logout, isAdmin, isEditor, supabaseReady };
 
   return (
     <AuthContext.Provider value={value}>

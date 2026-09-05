@@ -4,33 +4,82 @@ import { supabase } from '../../lib/supabase';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
 const ESTADO_CONFIG = {
-  pagado:    { bg: 'bg-green-50',   border: 'border-green-300',  icon: 'check_circle', iconColor: 'text-green-600',  label: 'Pagado',    ring: 'hover:ring-2 hover:ring-green-400 cursor-pointer' },
-  adelanto:  { bg: 'bg-blue-50',    border: 'border-blue-300',   icon: 'schedule_send', iconColor: 'text-blue-600',  label: 'Adelanto',  ring: 'hover:ring-2 hover:ring-blue-400 cursor-pointer' },
-  pendiente: { bg: 'bg-amber-50',   border: 'border-amber-300',  icon: 'schedule',     iconColor: 'text-amber-500',  label: 'Pendiente', ring: '' },
-  vencido:   { bg: 'bg-red-50',     border: 'border-red-300',    icon: 'warning',      iconColor: 'text-red-500',    label: 'Vencido',   ring: '' },
-  futuro:    { bg: 'bg-gray-50',    border: 'border-gray-200',   icon: 'remove',       iconColor: 'text-gray-300',   label: '—',         ring: '' },
+  pagado:          { bg: 'bg-green-50',   border: 'border-green-300',  icon: 'check_circle',  iconColor: 'text-green-600',  label: 'Pagado',           ring: 'hover:ring-2 hover:ring-green-400 cursor-pointer' },
+  adelanto:        { bg: 'bg-blue-50',    border: 'border-blue-300',   icon: 'schedule_send', iconColor: 'text-blue-600',   label: 'Adelanto',         ring: 'hover:ring-2 hover:ring-blue-400 cursor-pointer' },
+  pendiente:       { bg: 'bg-amber-50',   border: 'border-amber-300',  icon: 'schedule',      iconColor: 'text-amber-500',  label: 'Pendiente',        ring: '' },
+  vencido:         { bg: 'bg-red-50',     border: 'border-red-300',    icon: 'warning',       iconColor: 'text-red-500',    label: 'Vencido',          ring: '' },
+  futuro:          { bg: 'bg-gray-50',    border: 'border-gray-200',   icon: 'remove',        iconColor: 'text-gray-300',   label: '—',                ring: '' },
+  en_verificacion: { bg: 'bg-orange-50',  border: 'border-orange-400', icon: 'hourglass_top', iconColor: 'text-orange-500', label: 'En verificación',  ring: 'hover:ring-2 hover:ring-orange-400 cursor-pointer' },
+  rechazado:       { bg: 'bg-rose-50',    border: 'border-rose-400',   icon: 'cancel',        iconColor: 'text-rose-600',   label: 'Rechazado',        ring: 'hover:ring-2 hover:ring-rose-400 cursor-pointer' },
 };
 
-// ─── Visor de Comprobante ─────────────────────────────────────────────────────
-function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
+// ─── Visor de Comprobante (con acciones de verificación para admin) ─────────────
+function ReceiptViewer({ transaccion, mesCodigo, onClose, onAprobar, onRechazar }) {
+  const [accionLoading, setAccionLoading] = useState(null); // 'aprobar' | 'rechazar'
+  const [notaRechazo, setNotaRechazo] = useState('');
+  const [showRechazoInput, setShowRechazoInput] = useState(false);
+
+  const esPendiente = transaccion.estado_verificacion === 'pendiente_verificacion';
+
+  const handleAprobar = async () => {
+    setAccionLoading('aprobar');
+    await onAprobar(transaccion);
+    setAccionLoading(null);
+    onClose();
+  };
+
+  const handleRechazar = async () => {
+    setAccionLoading('rechazar');
+    await onRechazar(transaccion, notaRechazo);
+    setAccionLoading(null);
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
             <h3 className="font-bold text-gray-800">Comprobante de Pago</h3>
             <p className="text-xs text-gray-500 mt-0.5">Fecha: {transaccion.fecha_pago} · ${Number(transaccion.monto_real).toFixed(2)}</p>
           </div>
           <div className="flex items-center gap-2">
-            <a href={transaccion.comprobante_url} download target="_blank" rel="noreferrer"
-               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition-colors">
-              <span className="material-symbols-outlined text-[18px]">download</span> Descargar
-            </a>
+            {transaccion.comprobante_url && (
+              <a href={transaccion.comprobante_url} download target="_blank" rel="noreferrer"
+                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">download</span> Descargar
+              </a>
+            )}
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
               <span className="material-symbols-outlined text-gray-500">close</span>
             </button>
           </div>
         </div>
+
+        {/* Badge de estado de verificación */}
+        {transaccion.estado_verificacion && (
+          <div className={`px-5 py-2.5 border-b flex items-center gap-2 ${
+            esPendiente ? 'bg-orange-50 border-orange-200' :
+            transaccion.estado_verificacion === 'aprobado' ? 'bg-green-50 border-green-200' :
+            'bg-rose-50 border-rose-200'
+          }`}>
+            <span className={`material-symbols-outlined text-[18px] ${
+              esPendiente ? 'text-orange-500 animate-pulse' :
+              transaccion.estado_verificacion === 'aprobado' ? 'text-green-600' : 'text-rose-600'
+            }`}>
+              {esPendiente ? 'hourglass_top' : transaccion.estado_verificacion === 'aprobado' ? 'verified' : 'cancel'}
+            </span>
+            <span className={`text-xs font-bold ${
+              esPendiente ? 'text-orange-700' :
+              transaccion.estado_verificacion === 'aprobado' ? 'text-green-700' : 'text-rose-700'
+            }`}>
+              {esPendiente ? 'Pendiente de verificación por el administrador' :
+               transaccion.estado_verificacion === 'aprobado' ? 'Pago aprobado por el administrador' :
+               'Pago rechazado por el administrador'}
+            </span>
+          </div>
+        )}
 
         {/* Meses cubiertos por esta transacción */}
         <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
@@ -49,9 +98,76 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
         </div>
 
         <div className="p-4 bg-gray-50 flex items-center justify-center min-h-56">
-          <img src={transaccion.comprobante_url} alt="Comprobante"
-               className="max-w-full rounded-lg shadow object-contain max-h-80" />
+          {transaccion.comprobante_url ? (
+            <img src={transaccion.comprobante_url} alt="Comprobante"
+                 className="max-w-full rounded-lg shadow object-contain max-h-80" />
+          ) : (
+            <div className="text-center text-gray-400 py-10">
+              <span className="material-symbols-outlined text-4xl mb-2">receipt_long</span>
+              <p className="text-sm">Sin imagen adjunta.</p>
+            </div>
+          )}
         </div>
+
+        {/* Acciones de verificación — solo visibles cuando está pendiente */}
+        {esPendiente && onAprobar && onRechazar && (
+          <div className="px-5 py-4 border-t border-gray-200 bg-gray-50">
+            {!showRechazoInput ? (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleAprobar}
+                  disabled={!!accionLoading}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-green-600 text-white font-bold text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  {accionLoading === 'aprobar' ? (
+                    <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                  )}
+                  Aprobar Pago
+                </button>
+                <button
+                  onClick={() => setShowRechazoInput(true)}
+                  disabled={!!accionLoading}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 disabled:opacity-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">cancel</span>
+                  Rechazar Pago
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <textarea
+                  value={notaRechazo}
+                  onChange={e => setNotaRechazo(e.target.value)}
+                  placeholder="Motivo del rechazo (opcional)..."
+                  rows={2}
+                  className="w-full border border-rose-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRechazar}
+                    disabled={!!accionLoading}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 disabled:opacity-50 transition-colors"
+                  >
+                    {accionLoading === 'rechazar' ? (
+                      <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-[18px]">cancel</span>
+                    )}
+                    Confirmar Rechazo
+                  </button>
+                  <button
+                    onClick={() => setShowRechazoInput(false)}
+                    className="px-4 py-2 rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -301,7 +417,7 @@ function PagosTab({ member, onUpdateMember }) {
   const mesesStatus = derivarEstadoMeses(member.transacciones, montoPension);
   const pagados    = mesesStatus.filter(m => ['pagado','adelanto'].includes(m.estado)).length;
   const vencidos   = mesesStatus.filter(m => m.estado === 'vencido').length;
-  const adelantos  = mesesStatus.filter(m => m.estado === 'adelanto').length;
+  const enVerificacion = mesesStatus.filter(m => m.estado === 'en_verificacion').length;
   const totalPagado = (member.transacciones || []).reduce((s, t) => s + Number(t.monto_real || 0), 0);
   const montoVencido = mesesStatus.filter(m => m.estado === 'vencido').reduce((s, m) => s + m.montoPension, 0);
 
@@ -387,12 +503,32 @@ function PagosTab({ member, onUpdateMember }) {
     }
   };
 
-  const handleCellClick = (mes) => {
-    if (!mes.transaccion) return;
-    if (!mes.transaccion.comprobante_url) {
-      alert('Este pago no tiene comprobante adjunto.');
+  // ── Aprobar/Rechazar pago del representante ─────────────────────────────────
+  const handleVerificarPago = async (txn, nuevoEstado, notaExtra) => {
+    if (!txn.id) return;
+    const updateData = { estado_verificacion: nuevoEstado };
+    if (notaExtra) updateData.notas = `${txn.notas || ''} [${nuevoEstado === 'rechazado' ? 'Rechazado' : 'Aprobado'}: ${notaExtra}]`.trim();
+
+    const { error } = await supabase
+      .from('transacciones')
+      .update(updateData)
+      .eq('id', txn.id);
+
+    if (error) {
+      console.error('Error al verificar pago:', error);
+      alert('No se pudo actualizar el estado del pago. Intenta nuevamente.');
       return;
     }
+
+    // Actualizar la UI de forma optimista
+    const updatedTxns = (member.transacciones || []).map(t =>
+      t.id === txn.id ? { ...t, ...updateData } : t
+    );
+    if (onUpdateMember) onUpdateMember({ ...member, transacciones: updatedTxns });
+  };
+
+  const handleCellClick = (mes) => {
+    if (!mes.transaccion) return;
     setReceiptOpen({ transaccion: mes.transaccion, mesCodigo: mes.codigo });
   };
 
@@ -409,6 +545,22 @@ function PagosTab({ member, onUpdateMember }) {
           </div>
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900">
             ${montoPension.toFixed(2)} / mes
+          </span>
+        </div>
+      )}
+
+      {/* Banner de pagos pendientes de verificación */}
+      {enVerificacion > 0 && (
+        <div className="bg-orange-50 border border-orange-300 rounded-xl p-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-orange-500 animate-pulse">hourglass_top</span>
+            <div>
+              <p className="text-xs font-bold text-orange-900">{enVerificacion} pago(s) pendiente(s) de verificación</p>
+              <p className="text-[11px] text-orange-700">Revisa el comprobante y aprueba o rechaza cada pago.</p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-200 text-orange-900">
+            Acción requerida
           </span>
         </div>
       )}
@@ -436,19 +588,22 @@ function PagosTab({ member, onUpdateMember }) {
       {/* Leyenda */}
       <div className="flex flex-wrap gap-4 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-200">
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500 inline-block"></span> Pagado</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Pagado por adelantado</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> Mes actual (pendiente)</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Vencido sin pagar</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-300 inline-block"></span> Mes futuro</span>
-        <span className="flex items-center gap-1.5 font-semibold">👆 Clic en pagado = ver comprobante</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Adelanto</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> Pendiente</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Vencido</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-orange-400 inline-block"></span> En verificación</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-300 inline-block"></span> Futuro</span>
+        <span className="flex items-center gap-1.5 font-semibold">👆 Clic en pagado/verificación = ver comprobante</span>
       </div>
 
       {/* Cuadrícula de meses */}
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
         {mesesStatus.map(mes => {
-          const c = ESTADO_CONFIG[mes.estado];
+          const c = ESTADO_CONFIG[mes.estado] || ESTADO_CONFIG.futuro;
           const hasReceipt = mes.transaccion?.comprobante_url;
-          const clickable = ['pagado','adelanto'].includes(mes.estado);
+          const isEnVerif = mes.estado === 'en_verificacion';
+          const isRechazado = mes.estado === 'rechazado';
+          const clickable = ['pagado','adelanto'].includes(mes.estado) || isEnVerif || isRechazado;
           const otrosMeses = mes.transaccion?.meses_cubiertos?.filter(x => x !== mes.codigo) || [];
 
           return (
@@ -458,7 +613,7 @@ function PagosTab({ member, onUpdateMember }) {
               title={clickable ? (hasReceipt ? 'Clic para ver comprobante' : 'Sin comprobante adjunto') : ''}
               className={`border rounded-xl p-3 flex flex-col items-center gap-1 transition-all select-none ${c.bg} ${c.border} ${clickable ? c.ring : 'cursor-default'} ${mes.estado === 'futuro' ? 'opacity-50' : ''}`}
             >
-              <span className={`material-symbols-outlined text-xl ${c.iconColor}`}>{c.icon}</span>
+              <span className={`material-symbols-outlined text-xl ${c.iconColor} ${isEnVerif ? 'animate-pulse' : ''}`}>{c.icon}</span>
               <span className="font-bold text-gray-700 text-sm">{mes.codigo}</span>
               <span className="text-[10px] text-gray-500">${mes.montoPension.toFixed(0)}</span>
 
@@ -469,13 +624,17 @@ function PagosTab({ member, onUpdateMember }) {
                 </span>
               )}
 
-              {/* Indicador de comprobante */}
+              {/* Indicador de estado */}
               {clickable && (
-                <span className={`text-[9px] flex items-center gap-0.5 ${hasReceipt ? 'text-blue-600' : 'text-gray-400'}`}>
+                <span className={`text-[9px] flex items-center gap-0.5 ${
+                  isEnVerif ? 'text-orange-600 font-bold' :
+                  isRechazado ? 'text-rose-600 font-bold' :
+                  hasReceipt ? 'text-blue-600' : 'text-gray-400'
+                }`}>
                   <span className="material-symbols-outlined text-[10px]">
-                    {hasReceipt ? 'receipt_long' : 'receipt'}
+                    {isEnVerif ? 'hourglass_top' : isRechazado ? 'cancel' : hasReceipt ? 'receipt_long' : 'receipt'}
                   </span>
-                  {hasReceipt ? 'Ver' : 'Sin comprobante'}
+                  {isEnVerif ? 'Verificar' : isRechazado ? 'Rechazado' : hasReceipt ? 'Ver' : 'Sin comprobante'}
                 </span>
               )}
             </div>
@@ -487,37 +646,75 @@ function PagosTab({ member, onUpdateMember }) {
       <div>
         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Historial de Transacciones</h4>
         <div className="space-y-2">
-          {(member.transacciones || []).map(txn => (
-            <div key={txn.id} className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#001f3f]/10 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[16px] text-[#001f3f]">receipt_long</span>
+          {(member.transacciones || []).length === 0 && (
+            <p className="text-xs text-gray-400 text-center py-4">Sin transacciones registradas.</p>
+          )}
+          {(member.transacciones || []).map(txn => {
+            const estadoVerif = txn.estado_verificacion;
+            return (
+              <div key={txn.id} className={`border rounded-xl px-4 py-3 ${
+                estadoVerif === 'pendiente_verificacion' ? 'bg-orange-50 border-orange-200' :
+                estadoVerif === 'rechazado' ? 'bg-rose-50 border-rose-200' :
+                'bg-gray-50 border-gray-200'
+              }`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      estadoVerif === 'pendiente_verificacion' ? 'bg-orange-100' :
+                      estadoVerif === 'rechazado' ? 'bg-rose-100' : 'bg-[#001f3f]/10'
+                    }`}>
+                      <span className={`material-symbols-outlined text-[16px] ${
+                        estadoVerif === 'pendiente_verificacion' ? 'text-orange-500' :
+                        estadoVerif === 'rechazado' ? 'text-rose-600' : 'text-[#001f3f]'
+                      }`}>
+                        {estadoVerif === 'pendiente_verificacion' ? 'hourglass_top' :
+                         estadoVerif === 'rechazado' ? 'cancel' : 'receipt_long'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{txn.meses_cubiertos?.join(' + ')}</p>
+                      <p className="text-xs text-gray-400">{txn.fecha_pago}{txn.notas ? ` · ${txn.notas}` : ''}</p>
+                      {/* Badge estado verificación */}
+                      {estadoVerif === 'pendiente_verificacion' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200 mt-1">
+                          <span className="material-symbols-outlined text-[10px] animate-pulse">hourglass_top</span>
+                          Pendiente de verificación
+                        </span>
+                      )}
+                      {estadoVerif === 'rechazado' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200 mt-1">
+                          <span className="material-symbols-outlined text-[10px]">cancel</span>
+                          Rechazado
+                        </span>
+                      )}
+                      {(estadoVerif === 'aprobado' || !estadoVerif) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 mt-1">
+                          <span className="material-symbols-outlined text-[10px]">verified</span>
+                          {estadoVerif === 'aprobado' ? 'Aprobado' : 'Registrado'}
+                        </span>
+                      )}
+                      {/* Badge estado factura */}
+                      <FacturaBadge
+                        estado={txn.estado_factura}
+                        url_ride={txn.facturas?.url_ride}
+                        onReintentar={() => handleReintentarFactura(txn)}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{txn.meses_cubiertos?.join(' + ')}</p>
-                    <p className="text-xs text-gray-400">{txn.fecha_pago}{txn.notas ? ` · ${txn.notas}` : ''}</p>
-                    {/* Badge estado factura */}
-                    <FacturaBadge
-                      estado={txn.estado_factura}
-                      url_ride={txn.facturas?.url_ride}
-                      onReintentar={() => handleReintentarFactura(txn)}
-                    />
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-gray-800">${Number(txn.monto_real).toFixed(2)}</p>
+                    {txn.comprobante_url && (
+                      <button
+                        onClick={() => setReceiptOpen({ transaccion: txn, mesCodigo: txn.meses_cubiertos?.[0] })}
+                        className="text-[10px] text-blue-600 hover:underline">
+                        Ver comprobante
+                      </button>
+                    )}
                   </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="font-bold text-gray-800">${Number(txn.monto_real).toFixed(2)}</p>
-                  {txn.comprobante_url && (
-                    <button
-                      onClick={() => setReceiptOpen({ transaccion: txn, mesCodigo: txn.meses_cubiertos[0] })}
-                      className="text-[10px] text-blue-600 hover:underline">
-                      Ver comprobante
-                    </button>
-                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -538,6 +735,8 @@ function PagosTab({ member, onUpdateMember }) {
           transaccion={receiptOpen.transaccion}
           mesCodigo={receiptOpen.mesCodigo}
           onClose={() => setReceiptOpen(null)}
+          onAprobar={(txn) => handleVerificarPago(txn, 'aprobado', '')}
+          onRechazar={(txn, nota) => handleVerificarPago(txn, 'rechazado', nota)}
         />
       )}
       {registerOpen && (

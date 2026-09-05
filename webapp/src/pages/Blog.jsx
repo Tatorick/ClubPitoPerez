@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BLOG_POSTS, CATEGORIAS } from '../data/blogData';
+import { supabase } from '../lib/supabase';
 
 // ── Modal de artículo ──────────────────────────────────────────────────────────
 function ArticuloModal({ post, onClose }) {
@@ -18,7 +19,7 @@ function ArticuloModal({ post, onClose }) {
         {/* Imagen hero del artículo */}
         <div className="relative h-64 overflow-hidden rounded-t-2xl">
           <img
-            src={post.imagen}
+            src={post.imagen_url || post.imagen}
             alt={post.titulo}
             className="w-full h-full object-cover"
           />
@@ -46,7 +47,7 @@ function ArticuloModal({ post, onClose }) {
             {post.autor}
             <span className="w-1 h-1 rounded-full bg-gray-300 inline-block" />
             <span className="material-symbols-outlined text-[16px]">schedule</span>
-            {post.tiempoLectura}
+            {post.tiempo_lectura || post.tiempoLectura}
           </div>
 
           <h1 className="font-headline-lg text-headline-lg text-primary mb-6 leading-tight">
@@ -54,7 +55,7 @@ function ArticuloModal({ post, onClose }) {
           </h1>
 
           <div className="space-y-4">
-            {post.contenido.map((parr, i) => (
+            {(Array.isArray(post.contenido) ? post.contenido : post.contenido.split('\n').filter(p => p.trim())).map((parr, i) => (
               <p key={i} className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
                 {parr}
               </p>
@@ -97,7 +98,7 @@ function BlogCard({ post, onRead, index }) {
       {/* Imagen */}
       <div className="relative h-52 overflow-hidden">
         <img
-          src={post.imagen}
+          src={post.imagen_url || post.imagen}
           alt={post.titulo}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
@@ -115,7 +116,7 @@ function BlogCard({ post, onRead, index }) {
           {post.fecha}
           <span className="w-1 h-1 rounded-full bg-gray-200 inline-block" />
           <span className="material-symbols-outlined text-[14px]">schedule</span>
-          {post.tiempoLectura}
+          {post.tiempo_lectura || post.tiempoLectura}
         </div>
 
         <h2 className="font-headline-md text-headline-md text-primary mb-3 leading-tight group-hover:text-secondary transition-colors line-clamp-2">
@@ -147,6 +148,33 @@ function BlogCard({ post, onRead, index }) {
 export default function Blog() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [filtro, setFiltro] = useState('todos');
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchPosts() {
+      try {
+        const { data, error } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('publicado', true)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          setPosts(data);
+        } else {
+          setPosts(BLOG_POSTS); // Fallback si no hay nada
+        }
+      } catch (err) {
+        console.error('Error cargando blog de Supabase, usando fallback.', err);
+        setPosts(BLOG_POSTS);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPosts();
+  }, []);
 
   const categoriasFiltro = [
     { key: 'todos', label: 'Todos' },
@@ -157,8 +185,8 @@ export default function Blog() {
   ];
 
   const postsFiltrados = filtro === 'todos'
-    ? BLOG_POSTS
-    : BLOG_POSTS.filter(p => p.categoria === filtro);
+    ? posts
+    : posts.filter(p => p.categoria === filtro);
 
   return (
     <div className="bg-background min-h-screen font-body-md">
@@ -202,7 +230,11 @@ export default function Blog() {
 
       {/* Grid de artículos */}
       <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-12">
-        {postsFiltrados.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          </div>
+        ) : postsFiltrados.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
             <span className="material-symbols-outlined text-6xl block mb-3">article</span>
             <p>No hay artículos en esta categoría aún.</p>

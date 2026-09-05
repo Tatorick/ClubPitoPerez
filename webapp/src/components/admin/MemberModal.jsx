@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { derivarEstadoMeses } from '../../utils/pagos';
 import { supabase } from '../../lib/supabase';
 
@@ -560,6 +560,20 @@ function FichaTab({ member, onUpdateMember }) {
     grupo_horario: member.grupo_horario || ''
   });
   const [savingAsignacion, setSavingAsignacion] = useState(false);
+  const [catalogos, setCatalogos] = useState({ entrenadores: [], horarios: [] });
+
+  useEffect(() => {
+    async function loadCatalogos() {
+      const { data } = await supabase.from('config_club').select('entrenadores_lista, horarios_lista').maybeSingle();
+      if (data) {
+        setCatalogos({
+          entrenadores: data.entrenadores_lista || [],
+          horarios: data.horarios_lista || []
+        });
+      }
+    }
+    loadCatalogos();
+  }, []);
 
   const handleSaveAsignacion = async () => {
     setSavingAsignacion(true);
@@ -640,30 +654,35 @@ function FichaTab({ member, onUpdateMember }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
               <div>
                 <label className="block text-xs font-bold text-orange-900 mb-1">Entrenador Asignado</label>
-                <select
+                <input
+                  type="text"
+                  list="lista-entrenadores"
                   value={asignacionData.entrenador_asignado}
                   onChange={(e) => setAsignacionData({...asignacionData, entrenador_asignado: e.target.value})}
                   className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-orange-500 bg-white"
-                >
-                  <option value="">-- Sin asignar --</option>
-                  <option value="Kevin Culcay (FIV 1) & Marcos Pérez (FIV 3)">Kevin Culcay & Marcos Pérez</option>
-                  <option value="Kevin Culcay (FIV 1)">Kevin Culcay (FIV 1)</option>
-                  <option value="Marcos Pérez (FIV 3)">Marcos Pérez (FIV 3)</option>
-                  <option value="Otro Entrenador">Otro Entrenador</option>
-                </select>
+                  placeholder="Selecciona o escribe..."
+                />
+                <datalist id="lista-entrenadores">
+                  {catalogos.entrenadores.map((ent, i) => (
+                    <option key={i} value={ent} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label className="block text-xs font-bold text-orange-900 mb-1">Grupo y Horario</label>
-                <select
+                <input
+                  type="text"
+                  list="lista-horarios"
                   value={asignacionData.grupo_horario}
                   onChange={(e) => setAsignacionData({...asignacionData, grupo_horario: e.target.value})}
                   className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-orange-500 bg-white"
-                >
-                  <option value="">-- Sin asignar --</option>
-                  <option value="Lunes, Miércoles y Viernes - 16:00 a 18:00 (Cancha 1)">Lunes, Miércoles, Viernes - 16:00 a 18:00</option>
-                  <option value="Martes y Jueves - 16:00 a 18:00 (Cancha 1)">Martes y Jueves - 16:00 a 18:00</option>
-                  <option value="Sábados - 08:00 a 11:00 (Coliseo)">Sábados - 08:00 a 11:00 (Coliseo)</option>
-                </select>
+                  placeholder="Selecciona o escribe..."
+                />
+                <datalist id="lista-horarios">
+                  {catalogos.horarios.map((hor, i) => (
+                    <option key={i} value={hor} />
+                  ))}
+                </datalist>
               </div>
             </div>
           ) : (

@@ -77,11 +77,17 @@ export default function ConfigView() {
     cod_establecimiento: '001',
     cod_punto_emision: '001',
     tarifa_iva: '0',
+    entrenadores_lista: [],
+    horarios_lista: [],
   });
 
   const [fieldErrors, setFieldErrors] = useState({});
   const [showApiKey, setShowApiKey] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+
+  // Estados locales para los inputs de los catálogos
+  const [nuevoEntrenador, setNuevoEntrenador] = useState('');
+  const [nuevoHorario, setNuevoHorario] = useState('');
 
   // ── Cargar configuración al montar ─────────────────────────────────────────
   useEffect(() => {
@@ -112,6 +118,8 @@ export default function ConfigView() {
           cod_establecimiento:        data.cod_establecimiento || '001',
           cod_punto_emision:          data.cod_punto_emision || '001',
           tarifa_iva:                 data.tarifa_iva || '0',
+          entrenadores_lista:         data.entrenadores_lista || [],
+          horarios_lista:             data.horarios_lista || [],
         }));
       }
       setLoading(false);
@@ -179,6 +187,8 @@ export default function ConfigView() {
         cod_establecimiento:        form.cod_establecimiento.trim(),
         cod_punto_emision:          form.cod_punto_emision.trim(),
         tarifa_iva:                 form.tarifa_iva,
+        entrenadores_lista:         form.entrenadores_lista,
+        horarios_lista:             form.horarios_lista,
       })
       .eq('singleton', true);
 
@@ -522,7 +532,113 @@ export default function ConfigView() {
         </div>
       </ConfigSection>
 
-      {/* ═══ SECCIÓN 4: LOGO DEL CLUB ══════════════════════════════════════════ */}
+      {/* ═══ SECCIÓN 4: CATÁLOGOS (ENTRENADORES Y HORARIOS) ════════════════════ */}
+      <ConfigSection icon="list_alt" title="Catálogo de Entrenadores y Horarios"
+        badge={(form.entrenadores_lista?.length || 0) + (form.horarios_lista?.length || 0) + ' items'}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* Entrenadores */}
+          <div>
+            <h4 className="text-sm font-bold text-gray-800 mb-2">Entrenadores / Cuerpo Técnico</h4>
+            <p className="text-xs text-gray-500 mb-3">Opciones que aparecerán al asignar un entrenador.</p>
+            
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Ej: Marcos Pérez (FIV 3)"
+                className={inputCls}
+                value={nuevoEntrenador}
+                onChange={e => setNuevoEntrenador(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!nuevoEntrenador.trim()) return;
+                    setForm(prev => ({ ...prev, entrenadores_lista: [...(prev.entrenadores_lista||[]), nuevoEntrenador.trim()] }));
+                    setNuevoEntrenador('');
+                  }
+                }}
+              />
+              <button type="button" onClick={() => {
+                if (!nuevoEntrenador.trim()) return;
+                setForm(prev => ({ ...prev, entrenadores_lista: [...(prev.entrenadores_lista||[]), nuevoEntrenador.trim()] }));
+                setNuevoEntrenador('');
+              }} className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-bold transition-colors">
+                <span className="material-symbols-outlined text-[18px]">add</span>
+              </button>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-gray-50/50">
+              {(!form.entrenadores_lista || form.entrenadores_lista.length === 0) ? (
+                <p className="p-3 text-xs text-gray-400 text-center">No hay entrenadores agregados</p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {form.entrenadores_lista.map((ent, idx) => (
+                    <li key={idx} className="flex items-center justify-between p-2.5 hover:bg-white transition-colors group">
+                      <span className="text-sm text-gray-700 font-medium">{ent}</span>
+                      <button type="button" onClick={() => setForm(prev => ({ ...prev, entrenadores_lista: prev.entrenadores_lista.filter((_, i) => i !== idx) }))}
+                        className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* Horarios */}
+          <div>
+            <h4 className="text-sm font-bold text-gray-800 mb-2">Horarios y Grupos</h4>
+            <p className="text-xs text-gray-500 mb-3">Opciones que aparecerán al asignar un horario.</p>
+            
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Ej: Lunes, Miércoles - 16:00 a 18:00"
+                className={inputCls}
+                value={nuevoHorario}
+                onChange={e => setNuevoHorario(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!nuevoHorario.trim()) return;
+                    setForm(prev => ({ ...prev, horarios_lista: [...(prev.horarios_lista||[]), nuevoHorario.trim()] }));
+                    setNuevoHorario('');
+                  }
+                }}
+              />
+              <button type="button" onClick={() => {
+                if (!nuevoHorario.trim()) return;
+                setForm(prev => ({ ...prev, horarios_lista: [...(prev.horarios_lista||[]), nuevoHorario.trim()] }));
+                setNuevoHorario('');
+              }} className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-bold transition-colors">
+                <span className="material-symbols-outlined text-[18px]">add</span>
+              </button>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-gray-50/50">
+              {(!form.horarios_lista || form.horarios_lista.length === 0) ? (
+                <p className="p-3 text-xs text-gray-400 text-center">No hay horarios agregados</p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {form.horarios_lista.map((hor, idx) => (
+                    <li key={idx} className="flex items-center justify-between p-2.5 hover:bg-white transition-colors group">
+                      <span className="text-sm text-gray-700 font-medium">{hor}</span>
+                      <button type="button" onClick={() => setForm(prev => ({ ...prev, horarios_lista: prev.horarios_lista.filter((_, i) => i !== idx) }))}
+                        className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          
+        </div>
+      </ConfigSection>
+
+      {/* ═══ SECCIÓN 5: LOGO DEL CLUB ══════════════════════════════════════════ */}
       <ConfigSection icon="image" title="Logo del Club"
         badge={form.logo_url ? 'Cargado' : 'Sin logo'}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">

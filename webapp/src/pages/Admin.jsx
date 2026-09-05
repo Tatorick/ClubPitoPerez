@@ -355,6 +355,10 @@ export default function Admin() {
 
         {/* Footer */}
         <div className="p-4 border-t border-white/10 space-y-1">
+          <Link to="/editor" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-orange-400 hover:bg-orange-500/20 hover:text-orange-300 transition-all">
+            <span className="material-symbols-outlined text-[20px]">edit_document</span>
+            Editor CMS
+          </Link>
           <Link to="/" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-200 hover:bg-white/10 hover:text-white transition-all">
             <span className="material-symbols-outlined text-[20px]">home</span>
             Volver al sitio
@@ -379,7 +383,7 @@ export default function Admin() {
               {activeTab === 'miembros' ? 'Directorio de Miembros'  : ''}
               {activeTab === 'config'   ? 'Ajustes del Club'        : ''}
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">A\u00f1o lectivo 2024 \u2013 2025</p>
+            <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Año lectivo 2024 - 2025</p>
           </div>
           <div className="flex items-center gap-2">
             <button className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">
@@ -421,6 +425,13 @@ export default function Admin() {
             {item.label}
           </button>
         ))}
+        <Link
+          to="/editor"
+          className="flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[22px]">edit_document</span>
+          Editor
+        </Link>
         <button
           onClick={handleLogout}
           className="flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[11px] font-semibold text-red-400 hover:text-red-300 transition-colors"

@@ -562,6 +562,63 @@ function FichaTab({ member, onUpdateMember }) {
   const [savingAsignacion, setSavingAsignacion] = useState(false);
   const [catalogos, setCatalogos] = useState({ entrenadores: [], horarios: [] });
 
+  // ─── Edición ficha ────────────────────────────────────────────────────────
+  const [isEditingFicha, setIsEditingFicha] = useState(false);
+  const [fichaForm, setFichaForm] = useState({ ...member });
+  const [savingFicha, setSavingFicha] = useState(false);
+
+  const handleFichaChange = (e) => {
+    const { name, value } = e.target;
+    setFichaForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveFicha = async () => {
+    setSavingFicha(true);
+    try {
+      const { data, error } = await supabase
+        .from('miembros')
+        .update({
+          nombres:              fichaForm.nombres,
+          cedula:               fichaForm.cedula,
+          fecha_nacimiento:     fichaForm.fecha_nacimiento,
+          genero:               fichaForm.genero,
+          nacionalidad:         fichaForm.nacionalidad,
+          direccion:            fichaForm.direccion,
+          categoria:            fichaForm.categoria,
+          discapacidad:         fichaForm.discapacidad,
+          tipo_discapacidad:    fichaForm.tipo_discapacidad,
+          porcentaje_discapacidad: fichaForm.porcentaje_discapacidad,
+          nee:                  fichaForm.nee,
+          usa_lentes:           fichaForm.usa_lentes,
+          padre_nombres:        fichaForm.padre_nombres,
+          padre_cedula:         fichaForm.padre_cedula,
+          padre_telefono:       fichaForm.padre_telefono,
+          padre_ocupacion:      fichaForm.padre_ocupacion,
+          madre_nombres:        fichaForm.madre_nombres,
+          madre_cedula:         fichaForm.madre_cedula,
+          madre_telefono:       fichaForm.madre_telefono,
+          madre_ocupacion:      fichaForm.madre_ocupacion,
+          representante_legal:  fichaForm.representante_legal,
+          facturacion_ruc:      fichaForm.facturacion_ruc,
+          facturacion_nombre:   fichaForm.facturacion_nombre,
+          facturacion_direccion: fichaForm.facturacion_direccion,
+          facturacion_telefono: fichaForm.facturacion_telefono,
+          facturacion_correo:   fichaForm.facturacion_correo,
+        })
+        .eq('id', member.id)
+        .select()
+        .single();
+      if (error) throw error;
+      if (onUpdateMember) onUpdateMember({ ...member, ...data });
+      setIsEditingFicha(false);
+    } catch (err) {
+      console.error('Error guardando ficha:', err);
+      alert('Error al guardar la ficha. Intenta de nuevo.');
+    } finally {
+      setSavingFicha(false);
+    }
+  };
+
   useEffect(() => {
     async function loadCatalogos() {
       const { data } = await supabase.from('config_club').select('entrenadores_lista, horarios_lista').maybeSingle();
@@ -601,11 +658,33 @@ function FichaTab({ member, onUpdateMember }) {
 
   return (
     <div className="p-6" id="ficha-print-area">
-      <div className="flex justify-end mb-4 print:hidden">
+      <div className="flex justify-between items-center mb-4 print:hidden gap-2">
+        <div className="flex gap-2">
+          {isEditingFicha ? (
+            <>
+              <button onClick={() => { setIsEditingFicha(false); setFichaForm({ ...member }); }}
+                disabled={savingFicha}
+                className="px-3 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={handleSaveFicha} disabled={savingFicha}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                {savingFicha ? <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-[14px]">save</span>}
+                {savingFicha ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setIsEditingFicha(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-[#001f3f] bg-white border border-[#001f3f]/30 rounded-lg hover:bg-[#001f3f]/5 transition-colors">
+              <span className="material-symbols-outlined text-[14px]">edit_note</span>
+              Editar Ficha
+            </button>
+          )}
+        </div>
         <button onClick={() => window.print()}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors">
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors">
           <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-          Descargar Ficha PDF
+          <span className="hidden sm:inline">Descargar PDF</span>
         </button>
       </div>
 
@@ -711,47 +790,105 @@ function FichaTab({ member, onUpdateMember }) {
           )}
         </div>
 
-        <Section title="Datos del Jugador" icon="sports_volleyball">
-          <Field label="Nombres" value={member.nombres} full />
-          <Field label="Cédula" value={member.cedula} />
-          <Field label="Fecha de Nacimiento" value={member.fecha_nacimiento} />
-          <Field label="Género" value={member.genero} />
-          <Field label="Nacionalidad" value={member.nacionalidad} />
-          <Field label="Dirección" value={member.direccion} full />
-        </Section>
-        <Section title="Ficha Médica" icon="medical_information">
-          <Field label="Discapacidad" value={member.discapacidad} />
-          {member.discapacidad === 'SÍ' && <>
-            <Field label="Tipo" value={member.tipo_discapacidad} />
-            <Field label="Porcentaje" value={`${member.porcentaje_discapacidad}%`} />
-          </>}
-          <Field label="NEE" value={member.nee} />
-          <Field label="Usa Lentes" value={member.usa_lentes} />
-        </Section>
-        <Section title="Datos del Padre" icon="person">
-          <Field label="Nombres" value={member.padre_nombres} full />
-          <Field label="Cédula" value={member.padre_cedula} />
-          <Field label="Teléfono" value={member.padre_telefono} />
-          <Field label="Ocupación" value={member.padre_ocupacion} />
-        </Section>
-        <Section title="Datos de la Madre" icon="person">
-          <Field label="Nombres" value={member.madre_nombres} full />
-          <Field label="Cédula" value={member.madre_cedula} />
-          <Field label="Teléfono" value={member.madre_telefono} />
-          <Field label="Ocupación" value={member.madre_ocupacion} />
-        </Section>
-        <Section title="Representante Legal" icon="verified_user">
-          <Field label="Es representante" value={member.representante_legal} />
-          <Field label="Teléfono"
-            value={member.representante_legal === 'Madre' ? member.madre_telefono : member.padre_telefono} />
-        </Section>
-        <Section title="Datos de Facturación" icon="receipt">
-          <Field label="Cédula / RUC" value={member.facturacion_ruc} />
-          <Field label="Razón Social" value={member.facturacion_nombre} full />
-          <Field label="Dirección" value={member.facturacion_direccion} full />
-          <Field label="Teléfono" value={member.facturacion_telefono} />
-          <Field label="Correo" value={member.facturacion_correo} />
-        </Section>
+        {/* ── Vista de lectura vs edición ── */}
+        {isEditingFicha ? (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">info</span>
+              Modifica los campos necesarios y presiona «Guardar Cambios» cuando termines.
+            </div>
+            {/* Jugador */}
+            <EditSection title="Datos del Jugador" icon="sports_volleyball">
+              <EditField label="Nombres" name="nombres" value={fichaForm.nombres || ''} onChange={handleFichaChange} full />
+              <EditField label="Cédula" name="cedula" value={fichaForm.cedula || ''} onChange={handleFichaChange} />
+              <EditField label="Fecha de Nacimiento" name="fecha_nacimiento" type="date" value={fichaForm.fecha_nacimiento || ''} onChange={handleFichaChange} />
+              <EditField label="Género" name="genero" value={fichaForm.genero || ''} onChange={handleFichaChange} as="select" options={['Masculino','Femenino','Otro']} />
+              <EditField label="Nacionalidad" name="nacionalidad" value={fichaForm.nacionalidad || ''} onChange={handleFichaChange} />
+              <EditField label="Categoría" name="categoria" value={fichaForm.categoria || ''} onChange={handleFichaChange} as="select" options={['Mini','Pre-Mini','Infantil','Juvenil','Mayores']} />
+              <EditField label="Dirección" name="direccion" value={fichaForm.direccion || ''} onChange={handleFichaChange} full />
+            </EditSection>
+            {/* Médica */}
+            <EditSection title="Ficha Médica" icon="medical_information">
+              <EditField label="Discapacidad" name="discapacidad" value={fichaForm.discapacidad || ''} onChange={handleFichaChange} as="select" options={['NO','SÍ']} />
+              {fichaForm.discapacidad === 'SÍ' && <>
+                <EditField label="Tipo" name="tipo_discapacidad" value={fichaForm.tipo_discapacidad || ''} onChange={handleFichaChange} />
+                <EditField label="Porcentaje (%)" name="porcentaje_discapacidad" type="number" value={fichaForm.porcentaje_discapacidad || ''} onChange={handleFichaChange} />
+              </>}
+              <EditField label="NEE" name="nee" value={fichaForm.nee || ''} onChange={handleFichaChange} as="select" options={['NO','SÍ']} />
+              <EditField label="Usa Lentes" name="usa_lentes" value={fichaForm.usa_lentes || ''} onChange={handleFichaChange} as="select" options={['NO','SÍ']} />
+            </EditSection>
+            {/* Padre */}
+            <EditSection title="Datos del Padre" icon="person">
+              <EditField label="Nombres" name="padre_nombres" value={fichaForm.padre_nombres || ''} onChange={handleFichaChange} full />
+              <EditField label="Cédula" name="padre_cedula" value={fichaForm.padre_cedula || ''} onChange={handleFichaChange} />
+              <EditField label="Teléfono" name="padre_telefono" value={fichaForm.padre_telefono || ''} onChange={handleFichaChange} />
+              <EditField label="Ocupación" name="padre_ocupacion" value={fichaForm.padre_ocupacion || ''} onChange={handleFichaChange} />
+            </EditSection>
+            {/* Madre */}
+            <EditSection title="Datos de la Madre" icon="person">
+              <EditField label="Nombres" name="madre_nombres" value={fichaForm.madre_nombres || ''} onChange={handleFichaChange} full />
+              <EditField label="Cédula" name="madre_cedula" value={fichaForm.madre_cedula || ''} onChange={handleFichaChange} />
+              <EditField label="Teléfono" name="madre_telefono" value={fichaForm.madre_telefono || ''} onChange={handleFichaChange} />
+              <EditField label="Ocupación" name="madre_ocupacion" value={fichaForm.madre_ocupacion || ''} onChange={handleFichaChange} />
+            </EditSection>
+            {/* Representante */}
+            <EditSection title="Representante Legal" icon="verified_user">
+              <EditField label="Es representante" name="representante_legal" value={fichaForm.representante_legal || ''} onChange={handleFichaChange} as="select" options={['Madre','Padre','Otro']} />
+            </EditSection>
+            {/* Facturación */}
+            <EditSection title="Datos de Facturación" icon="receipt">
+              <EditField label="Cédula / RUC" name="facturacion_ruc" value={fichaForm.facturacion_ruc || ''} onChange={handleFichaChange} />
+              <EditField label="Razón Social" name="facturacion_nombre" value={fichaForm.facturacion_nombre || ''} onChange={handleFichaChange} full />
+              <EditField label="Dirección" name="facturacion_direccion" value={fichaForm.facturacion_direccion || ''} onChange={handleFichaChange} full />
+              <EditField label="Teléfono" name="facturacion_telefono" value={fichaForm.facturacion_telefono || ''} onChange={handleFichaChange} />
+              <EditField label="Correo" name="facturacion_correo" value={fichaForm.facturacion_correo || ''} onChange={handleFichaChange} />
+            </EditSection>
+          </div>
+        ) : (
+          <>
+            <Section title="Datos del Jugador" icon="sports_volleyball">
+              <Field label="Nombres" value={member.nombres} full />
+              <Field label="Cédula" value={member.cedula} />
+              <Field label="Fecha de Nacimiento" value={member.fecha_nacimiento} />
+              <Field label="Género" value={member.genero} />
+              <Field label="Nacionalidad" value={member.nacionalidad} />
+              <Field label="Dirección" value={member.direccion} full />
+            </Section>
+            <Section title="Ficha Médica" icon="medical_information">
+              <Field label="Discapacidad" value={member.discapacidad} />
+              {member.discapacidad === 'SÍ' && <>
+                <Field label="Tipo" value={member.tipo_discapacidad} />
+                <Field label="Porcentaje" value={`${member.porcentaje_discapacidad}%`} />
+              </>}
+              <Field label="NEE" value={member.nee} />
+              <Field label="Usa Lentes" value={member.usa_lentes} />
+            </Section>
+            <Section title="Datos del Padre" icon="person">
+              <Field label="Nombres" value={member.padre_nombres} full />
+              <Field label="Cédula" value={member.padre_cedula} />
+              <Field label="Teléfono" value={member.padre_telefono} />
+              <Field label="Ocupación" value={member.padre_ocupacion} />
+            </Section>
+            <Section title="Datos de la Madre" icon="person">
+              <Field label="Nombres" value={member.madre_nombres} full />
+              <Field label="Cédula" value={member.madre_cedula} />
+              <Field label="Teléfono" value={member.madre_telefono} />
+              <Field label="Ocupación" value={member.madre_ocupacion} />
+            </Section>
+            <Section title="Representante Legal" icon="verified_user">
+              <Field label="Es representante" value={member.representante_legal} />
+              <Field label="Teléfono"
+                value={member.representante_legal === 'Madre' ? member.madre_telefono : member.padre_telefono} />
+            </Section>
+            <Section title="Datos de Facturación" icon="receipt">
+              <Field label="Cédula / RUC" value={member.facturacion_ruc} />
+              <Field label="Razón Social" value={member.facturacion_nombre} full />
+              <Field label="Dirección" value={member.facturacion_direccion} full />
+              <Field label="Teléfono" value={member.facturacion_telefono} />
+              <Field label="Correo" value={member.facturacion_correo} />
+            </Section>
+          </>
+        )}
       </div>
     </div>
   );
@@ -775,11 +912,55 @@ function Field({ label, value, full }) {
     </div>
   );
 }
+function EditSection({ title, icon, children }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <h4 className="flex items-center gap-2 text-sm font-bold text-[#001f3f] uppercase tracking-wider mb-3 pb-2 border-b border-gray-100">
+        <span className="material-symbols-outlined text-[18px] text-orange-500">{icon}</span>{title}
+      </h4>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">{children}</div>
+    </div>
+  );
+}
+function EditField({ label, name, value, onChange, full, type = 'text', as, options }) {
+  const cls = "w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-200 transition-all";
+  return (
+    <div className={full ? 'col-span-2' : ''}>
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+      {as === 'select' ? (
+        <select name={name} value={value} onChange={onChange} className={cls}>
+          <option value="">—</option>
+          {options?.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : (
+        <input type={type} name={name} value={value} onChange={onChange} className={cls} />
+      )}
+    </div>
+  );
+}
 
 // ─── Modal Principal ──────────────────────────────────────────────────────────
-export default function MemberModal({ member: initialMember, onClose }) {
+export default function MemberModal({ member: initialMember, onClose, onDelete }) {
   const [tab, setTab] = useState('pagos');
   const [member, setMember] = useState(initialMember);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('miembros').delete().eq('id', member.id);
+      if (error) throw error;
+      if (onDelete) onDelete(member.id);
+      onClose();
+    } catch (err) {
+      console.error('Error eliminando miembro:', err);
+      alert('No se pudo eliminar el jugador. Intenta de nuevo.');
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
 
   if (!member) return null;
 
@@ -804,7 +985,7 @@ export default function MemberModal({ member: initialMember, onClose }) {
           onClick={e => e.stopPropagation()}>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#001f3f] rounded-t-2xl">
+          <div className="relative flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#001f3f] rounded-t-2xl">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-white">person</span>
@@ -818,10 +999,36 @@ export default function MemberModal({ member: initialMember, onClose }) {
               <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${alDia ? 'bg-green-900/40 text-green-300 border-green-700' : 'bg-red-900/40 text-red-300 border-red-700'}`}>
                 {alDia ? '✓ Al día' : `⚠ ${vencidos} mes${vencidos > 1 ? 'es' : ''} vencido${vencidos > 1 ? 's' : ''}`}
               </span>
+              <button onClick={() => setConfirmDelete(true)}
+                className="p-1.5 rounded-lg hover:bg-red-900/40 transition-colors text-red-300 hover:text-red-200"
+                title="Eliminar jugador">
+                <span className="material-symbols-outlined">person_remove</span>
+              </button>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-white">close</span>
               </button>
             </div>
+
+            {/* Diálogo de confirmación de eliminación */}
+            {confirmDelete && (
+              <div className="absolute top-full left-0 right-0 z-[60] bg-red-900 text-white px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <p className="font-bold text-sm">¿Eliminar a {member.nombres}?</p>
+                  <p className="text-xs text-red-200 mt-0.5">Esta acción no se puede deshacer. El jugador será removido del sistema.</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => setConfirmDelete(false)}
+                    className="px-3 py-1.5 text-xs font-bold bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                    Cancelar
+                  </button>
+                  <button onClick={handleDelete} disabled={deleting}
+                    className="px-4 py-1.5 text-xs font-bold bg-red-500 hover:bg-red-400 rounded-lg transition-colors flex items-center gap-1.5">
+                    {deleting ? <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-[14px]">delete_forever</span>}
+                    {deleting ? 'Eliminando...' : 'Sí, eliminar'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tabs */}

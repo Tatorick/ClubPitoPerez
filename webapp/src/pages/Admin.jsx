@@ -304,9 +304,12 @@ export default function Admin() {
   };
 
   const handleMemberAdded = (newMember) => {
-    // Agregamos una propiedad vacía de transacciones para que no falle el getPaymentStatus
     const memberWithTxns = { ...newMember, transacciones: [] };
     setMiembros(prev => [memberWithTxns, ...prev]);
+  };
+
+  const handleMemberDeleted = (memberId) => {
+    setMiembros(prev => prev.filter(m => m.id !== memberId));
   };
 
   const navItems = [
@@ -432,6 +435,7 @@ export default function Admin() {
         <MemberModal
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
+          onDelete={handleMemberDeleted}
           onUpdateMember={(updated) => {
             setSelectedMember(updated);
             setMiembros(prev => prev.map(m => m.id === updated.id ? updated : m));

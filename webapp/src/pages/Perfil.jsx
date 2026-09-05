@@ -725,41 +725,25 @@ export default function Perfil() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Sesión 1 */}
-                <div className="bg-[#001f3f]/5 border border-blue-900/15 rounded-xl p-5 border-l-4 border-l-[#001f3f]">
+              {miembroData?.grupo_horario ? (
+                <div className="bg-orange-50/60 border border-orange-200/60 rounded-xl p-5 border-l-4 border-l-orange-500 mt-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Lunes, Miércoles y Viernes</span>
-                      <h3 className="text-base font-bold text-[#000613] mt-1">Técnica Formativa & Táctica</h3>
-                      <p className="text-xs text-gray-600 flex items-center gap-1.5 mt-2">
-                        <span className="material-symbols-outlined text-[15px] text-gray-500">schedule</span>
-                        04:00 PM – 06:00 PM (16:00 – 18:00)
-                      </p>
+                      <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Horario Asignado</span>
+                      <h3 className="text-base font-bold text-[#000613] mt-1">{miembroData.grupo_horario}</h3>
                     </div>
                     <span className="px-2 py-1 bg-white rounded-md text-xs font-bold text-gray-700 border border-gray-200">
-                      Cancha 1
+                      Entrenamiento Formativo
                     </span>
                   </div>
                 </div>
-
-                {/* Sesión 2 */}
-                <div className="bg-orange-50/60 border border-orange-200/60 rounded-xl p-5 border-l-4 border-l-orange-500">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Sábados</span>
-                      <h3 className="text-base font-bold text-[#000613] mt-1">Partidos y Cancha Abierta</h3>
-                      <p className="text-xs text-gray-600 flex items-center gap-1.5 mt-2">
-                        <span className="material-symbols-outlined text-[15px] text-gray-500">schedule</span>
-                        08:00 AM – 11:00 AM
-                      </p>
-                    </div>
-                    <span className="px-2 py-1 bg-white rounded-md text-xs font-bold text-gray-700 border border-gray-200">
-                      Coliseo
-                    </span>
-                  </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center mt-4">
+                  <span className="material-symbols-outlined text-gray-400 text-3xl mb-2">pending_actions</span>
+                  <p className="text-sm font-semibold text-gray-600">Horario pendiente de asignación</p>
+                  <p className="text-xs text-gray-500 mt-1">El club te asignará un grupo y horario muy pronto.</p>
                 </div>
-              </div>
+              )}
             </section>
 
           </div>
@@ -797,7 +781,7 @@ export default function Perfil() {
                 <div>
                   <span className="text-gray-400 font-medium block">Cuerpo Técnico Asignado:</span>
                   <span className="font-semibold text-gray-700">
-                    Kevin Culcay (FIV 1) & Marcos Pérez (FIV 3)
+                    {miembroData?.entrenador_asignado || 'Pendiente de asignación'}
                   </span>
                 </div>
 
@@ -834,13 +818,13 @@ export default function Perfil() {
                 Comunícate directamente con la administración del club o los entrenadores para justificaciones de falta o consultas de facturación.
               </p>
               <a
-                href="https://www.instagram.com/clubpitoperezcuenca"
+                href="https://wa.me/593995104405"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-colors"
               >
                 <span className="material-symbols-outlined text-[16px]">chat</span>
-                Contactar Club en Instagram
+                Contactar al Club por WhatsApp
               </a>
             </section>
 

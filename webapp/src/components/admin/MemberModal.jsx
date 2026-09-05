@@ -553,7 +553,38 @@ function PagosTab({ member, onUpdateMember }) {
 }
 
 // ─── Tab Ficha ────────────────────────────────────────────────────────────────
-function FichaTab({ member }) {
+function FichaTab({ member, onUpdateMember }) {
+  const [isEditingAsignacion, setIsEditingAsignacion] = useState(false);
+  const [asignacionData, setAsignacionData] = useState({
+    entrenador_asignado: member.entrenador_asignado || '',
+    grupo_horario: member.grupo_horario || ''
+  });
+  const [savingAsignacion, setSavingAsignacion] = useState(false);
+
+  const handleSaveAsignacion = async () => {
+    setSavingAsignacion(true);
+    try {
+      const { data, error } = await supabase
+        .from('miembros')
+        .update({
+          entrenador_asignado: asignacionData.entrenador_asignado,
+          grupo_horario: asignacionData.grupo_horario
+        })
+        .eq('id', member.id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      if (onUpdateMember) onUpdateMember({ ...member, ...data });
+      setIsEditingAsignacion(false);
+    } catch (err) {
+      console.error('Error guardando asignacion:', err);
+      alert('Error al guardar asignación deportiva');
+    } finally {
+      setSavingAsignacion(false);
+    }
+  };
+
   return (
     <div className="p-6" id="ficha-print-area">
       <div className="flex justify-end mb-4 print:hidden">
@@ -578,6 +609,89 @@ function FichaTab({ member }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        
+        {/* Asignación Deportiva (Nueva sección editable) */}
+        <div className="bg-orange-50 rounded-xl border border-orange-200 p-4 md:col-span-2 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-orange-200/50 to-transparent pointer-events-none" />
+          <div className="flex items-center justify-between mb-4 border-b border-orange-200/60 pb-2">
+            <h4 className="flex items-center gap-2 text-sm font-bold text-orange-800 uppercase tracking-wider">
+              <span className="material-symbols-outlined text-[18px]">whistle</span> Asignación Deportiva
+            </h4>
+            <div className="print:hidden">
+              {isEditingAsignacion ? (
+                <div className="flex gap-2 relative z-10">
+                  <button onClick={() => setIsEditingAsignacion(false)} disabled={savingAsignacion}
+                    className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">Cancelar</button>
+                  <button onClick={handleSaveAsignacion} disabled={savingAsignacion}
+                    className="px-3 py-1.5 text-xs font-bold text-white bg-orange-600 rounded hover:bg-orange-700 transition-colors flex items-center gap-1">
+                    {savingAsignacion ? <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> : 'Guardar'}
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setIsEditingAsignacion(true)}
+                  className="px-3 py-1.5 text-xs font-bold text-orange-700 bg-white border border-orange-300 rounded hover:bg-orange-100 transition-colors flex items-center gap-1 relative z-10">
+                  <span className="material-symbols-outlined text-[14px]">edit</span> Asignar Grupo
+                </button>
+              )}
+            </div>
+          </div>
+
+          {isEditingAsignacion ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
+              <div>
+                <label className="block text-xs font-bold text-orange-900 mb-1">Entrenador Asignado</label>
+                <select
+                  value={asignacionData.entrenador_asignado}
+                  onChange={(e) => setAsignacionData({...asignacionData, entrenador_asignado: e.target.value})}
+                  className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-orange-500 bg-white"
+                >
+                  <option value="">-- Sin asignar --</option>
+                  <option value="Kevin Culcay (FIV 1) & Marcos Pérez (FIV 3)">Kevin Culcay & Marcos Pérez</option>
+                  <option value="Kevin Culcay (FIV 1)">Kevin Culcay (FIV 1)</option>
+                  <option value="Marcos Pérez (FIV 3)">Marcos Pérez (FIV 3)</option>
+                  <option value="Otro Entrenador">Otro Entrenador</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-orange-900 mb-1">Grupo y Horario</label>
+                <select
+                  value={asignacionData.grupo_horario}
+                  onChange={(e) => setAsignacionData({...asignacionData, grupo_horario: e.target.value})}
+                  className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-orange-500 bg-white"
+                >
+                  <option value="">-- Sin asignar --</option>
+                  <option value="Lunes, Miércoles y Viernes - 16:00 a 18:00 (Cancha 1)">Lunes, Miércoles, Viernes - 16:00 a 18:00</option>
+                  <option value="Martes y Jueves - 16:00 a 18:00 (Cancha 1)">Martes y Jueves - 16:00 a 18:00</option>
+                  <option value="Sábados - 08:00 a 11:00 (Coliseo)">Sábados - 08:00 a 11:00 (Coliseo)</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
+              <div>
+                <p className="text-[10px] font-bold text-orange-700/80 uppercase tracking-wider mb-0.5">Entrenador Asignado</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {member.entrenador_asignado ? (
+                    <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px] text-green-600">check_circle</span> {member.entrenador_asignado}</span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-gray-500"><span className="material-symbols-outlined text-[16px]">pending</span> Pendiente de asignación</span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-orange-700/80 uppercase tracking-wider mb-0.5">Horario y Grupo</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {member.grupo_horario ? (
+                    <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px] text-green-600">check_circle</span> {member.grupo_horario}</span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-gray-500"><span className="material-symbols-outlined text-[16px]">pending</span> Pendiente de asignación</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
         <Section title="Datos del Jugador" icon="sports_volleyball">
           <Field label="Nombres" value={member.nombres} full />
           <Field label="Cédula" value={member.cedula} />
@@ -711,7 +825,7 @@ export default function MemberModal({ member: initialMember, onClose }) {
           {/* Contenido */}
           <div className="overflow-y-auto flex-1">
             {tab === 'pagos' && <PagosTab member={member} onUpdateMember={setMember} />}
-            {tab === 'ficha' && <FichaTab member={member} />}
+            {tab === 'ficha' && <FichaTab member={member} onUpdateMember={setMember} />}
           </div>
         </div>
       </div>

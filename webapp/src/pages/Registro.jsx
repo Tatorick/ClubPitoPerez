@@ -250,7 +250,7 @@ export default function Registro() {
     setSubmitLoading(true);
     setSubmitError('');
     try {
-      const nombreCompletoJugador = `${formData.apellidosJugador.trim()} ${formData.nombresJugador.trim()}`;
+      const nombreCompletoJugador = `${formData.nombresJugador.trim()} ${formData.apellidosJugador.trim()}`;
       
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim(), password: formData.password,
@@ -305,6 +305,42 @@ export default function Registro() {
         firma_representante: formData.firmaRepresentante.trim(), fecha_autorizacion: new Date().toISOString(),
       });
       if (insertError) throw new Error(`Error al guardar la ficha: ${insertError.message}`);
+
+      // Insertar automáticamente en la tabla miembros para que aparezca en el Admin
+      const { error: miembroError } = await supabase.from('miembros').insert({
+        nombres: nombreCompletoJugador,
+        cedula: formData.cedulaJugador.trim(),
+        fecha_nacimiento: formData.fechaNacimientoJugador,
+        genero: formData.genero,
+        nacionalidad: formData.nacionalidad.trim(),
+        direccion: formData.direccion.trim(),
+        categoria: 'U14', // Por defecto, el admin puede ajustarlo luego
+        tiene_beca: false,
+        monto_pension: 55,
+        tiene_discapacidad: formData.discapacidad === 'SI',
+        tipo_discapacidad: formData.tipoDiscapacidad || '',
+        porcentaje_discapacidad: formData.porcentajeDiscapacidad ? parseInt(formData.porcentajeDiscapacidad, 10) : null,
+        necesidades_especiales: formData.nee === 'SI',
+        usa_lentes: formData.usaLentes === 'SI',
+        padre_nombres: formData.nombresPadre || '',
+        padre_cedula: formData.cedulaPadre || '',
+        padre_telefono: formData.telefonoPadre || '',
+        padre_ocupacion: formData.ocupacionPadre || '',
+        madre_nombres: formData.nombresMadre || '',
+        madre_cedula: formData.cedulaMadre || '',
+        madre_telefono: formData.telefonoMadre || '',
+        madre_ocupacion: formData.ocupacionMadre || '',
+        representante_legal: formData.esRepresentante,
+        facturacion_ruc: formData.rucFacturacion.trim(),
+        facturacion_nombre: formData.nombreFacturacion.trim(),
+        facturacion_direccion: formData.direccionFacturacion.trim(),
+        facturacion_telefono: formData.telefonoFacturacion.trim(),
+        facturacion_correo: formData.correoFacturacion.trim(),
+        foto_url: fotoUrl
+      });
+      
+      if (miembroError) console.warn('Advertencia: no se pudo crear el miembro.', miembroError.message);
+
       navigate('/perfil', { replace: true });
     } catch (err) {
       setSubmitError(err.message || 'Ocurrió un error inesperado. Intenta de nuevo.');

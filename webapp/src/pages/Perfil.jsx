@@ -521,7 +521,20 @@ export default function Perfil() {
 
   // Datos dinámicos del deportista
   const nombreCompleto = fichaData?.nombres_jugador || miembroData?.nombres || user?.user_metadata?.nombre || 'Deportista';
-  const primerNombre = nombreCompleto.split(' ')[0] || 'Deportista';
+  
+  const partesNombre = nombreCompleto.split(' ').filter(Boolean);
+  let nombreMostrar = 'Deportista';
+  if (partesNombre.length > 0) {
+    if (partesNombre.length === 4) {
+      nombreMostrar = `${partesNombre[0]} ${partesNombre[2]}`;
+    } else if (partesNombre.length === 3) {
+      // Si son 3, asumimos 1 nombre y 2 apellidos (Camila Ortiz Lopez -> Camila Ortiz)
+      nombreMostrar = `${partesNombre[0]} ${partesNombre[1]}`;
+    } else {
+      nombreMostrar = partesNombre.slice(0, 2).join(' ');
+    }
+  }
+
   const categoria = miembroData?.categoria || 'U14';
   const fotoUrl = fichaData?.foto_url || miembroData?.foto_url;
 
@@ -562,21 +575,21 @@ export default function Perfil() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 z-10">
             {/* Foto / Avatar */}
             <div className="relative">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden border-2 border-orange-500/40 bg-[#001f3f] flex items-center justify-center shadow-md">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white bg-[#001f3f] flex items-center justify-center shadow-xl ring-4 ring-orange-500/20">
                 {fotoUrl ? (
-                  <img src={fotoUrl} alt={nombreCompleto} className="w-full h-full object-cover" />
+                  <img src={fotoUrl} alt={nombreCompleto} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                 ) : (
-                  <span className="text-2xl font-bold text-white tracking-wider">
+                  <span className="text-3xl font-bold text-white tracking-wider">
                     {nombreCompleto.split(' ').map(n => n[0]).slice(0, 2).join('')}
                   </span>
                 )}
               </div>
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full" title="Miembro Activo" />
+              <span className="absolute bottom-1 right-2 w-6 h-6 bg-green-500 border-4 border-white rounded-full shadow-sm" title="Miembro Activo" />
             </div>
 
             {/* Info y Saludo */}
             <div>
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">
                   Categoría {categoria}
                 </span>
@@ -589,13 +602,13 @@ export default function Perfil() {
                     {tipoBeca} · Pensión: ${montoPension.toFixed(2)}/mes
                   </span>
                 )}
-                <span className="text-xs text-gray-500">📍 Sede Cuenca</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-bold text-[#000613]">
-                ¡Bienvenida de nuevo, <span className="text-orange-600">{primerNombre}</span>!
+                ¡Bienvenida de nuevo, <span className="text-orange-600">{nombreMostrar}</span>!
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Portal del Deportista · Club Pito Pérez Voleibol
+              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">location_on</span>
+                Sede Cuenca · Portal del Deportista
               </p>
             </div>
           </div>

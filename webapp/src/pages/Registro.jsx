@@ -263,25 +263,19 @@ export default function Registro() {
       let fotoUrl = null;
       if (fotoFile) {
         const ext = fotoFile.name.split('.').pop();
-        const filePath = `${userId}/foto.${ext}`;
+        const filePath = `${formData.cedulaJugador.trim()}-${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage
-          .from('fichas-fotos')
+          .from('fichas')
           .upload(filePath, fotoFile, { upsert: true });
 
         if (uploadError) {
-          // No es un error fatal: el registro continúa sin foto
           console.warn('Advertencia: no se pudo subir la foto del deportista.', uploadError.message);
         } else {
-          // Bucket PRIVADO → signed URL de 90 días (se puede renovar desde el perfil)
-          // IMPORTANTE: Configurar el bucket 'fichas-fotos' como PRIVADO en el panel de Supabase
-          const { data: signedData, error: signErr } = await supabase.storage
-            .from('fichas-fotos')
-            .createSignedUrl(filePath, 60 * 60 * 24 * 90); // 90 días
-
-          if (!signErr && signedData?.signedUrl) {
-            fotoUrl = signedData.signedUrl;
-          }
-          // Si falla la signed URL, fotoUrl se queda null (sin foto) — no se usa URL pública
+          const { data: publicUrlData } = supabase.storage
+            .from('fichas')
+            .getPublicUrl(filePath);
+            
+          fotoUrl = publicUrlData.publicUrl;
         }
       }
 

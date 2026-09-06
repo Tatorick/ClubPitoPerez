@@ -50,9 +50,10 @@ export default function ConfigView() {
     cod_establecimiento: '001',
     cod_punto_emision: '001',
     tarifa_iva: '0',
-    entrenadores_lista: [],
-    horarios_lista: [],
   });
+
+  const [entrenadores, setEntrenadores] = useState([]);
+  const [horarios, setHorarios] = useState([]);
 
   const [fieldErrors, setFieldErrors] = useState({});
   const [showApiKey, setShowApiKey] = useState(false);
@@ -83,10 +84,15 @@ export default function ConfigView() {
           cod_establecimiento:        data.cod_establecimiento || '001',
           cod_punto_emision:          data.cod_punto_emision || '001',
           tarifa_iva:                 data.tarifa_iva || '0',
-          entrenadores_lista:         (data.entrenadores_lista && data.entrenadores_lista.length > 0) ? data.entrenadores_lista : ['Kevin Culcay', 'Marcos Perez'],
-          horarios_lista:             (data.horarios_lista && data.horarios_lista.length > 0) ? data.horarios_lista : ['Femenino 19:00 a 20:30', 'Masculino 20:30 a 22:00'],
         }));
       }
+
+      const [{ data: ents }, { data: hors }] = await Promise.all([
+        supabase.from('entrenadores').select('*').order('id'),
+        supabase.from('horarios').select('*').order('id')
+      ]);
+      if (ents) setEntrenadores(ents);
+      if (hors) setHorarios(hors);
       setLoading(false);
     };
     fetchConfig();
@@ -142,8 +148,6 @@ export default function ConfigView() {
       cod_establecimiento:        form.cod_establecimiento?.trim() || '001',
       cod_punto_emision:          form.cod_punto_emision?.trim() || '001',
       tarifa_iva:                 form.tarifa_iva || '0',
-      entrenadores_lista:         form.entrenadores_lista || [],
-      horarios_lista:             form.horarios_lista || [],
     }).eq('singleton', true);
     setSaving(false);
     if (error) {
@@ -571,40 +575,47 @@ export default function ConfigView() {
                     className={inputCls}
                     value={nuevoEntrenador}
                     onChange={e => setNuevoEntrenador(e.target.value)}
-                    onKeyDown={e => {
+                    onKeyDown={async e => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         if (!nuevoEntrenador.trim()) return;
-                        setForm(prev => ({ ...prev, entrenadores_lista: [...(prev.entrenadores_lista||[]), nuevoEntrenador.trim()] }));
+                        const val = nuevoEntrenador.trim();
                         setNuevoEntrenador('');
+                        const { data, error } = await supabase.from('entrenadores').insert({ nombre: val }).select().single();
+                        if (!error && data) setEntrenadores(prev => [...prev, data]);
                       }
                     }}
                   />
-                  <button type="button" onClick={() => {
+                  <button type="button" onClick={async () => {
                     if (!nuevoEntrenador.trim()) return;
-                    setForm(prev => ({ ...prev, entrenadores_lista: [...(prev.entrenadores_lista||[]), nuevoEntrenador.trim()] }));
+                    const val = nuevoEntrenador.trim();
                     setNuevoEntrenador('');
+                    const { data, error } = await supabase.from('entrenadores').insert({ nombre: val }).select().single();
+                    if (!error && data) setEntrenadores(prev => [...prev, data]);
                   }} className="px-3 py-2 bg-[#001f3f] text-white rounded-lg hover:bg-blue-900 font-bold transition-colors">
                     <span className="material-symbols-outlined text-[18px]">add</span>
                   </button>
                 </div>
                 <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto bg-gray-50/50">
-                  {(!form.entrenadores_lista || form.entrenadores_lista.length === 0) ? (
+                  {entrenadores.length === 0 ? (
                     <div className="p-6 text-center">
                       <span className="material-symbols-outlined text-gray-300 text-3xl block mb-1">person_off</span>
                       <p className="text-xs text-gray-400">No hay entrenadores registrados</p>
                     </div>
                   ) : (
                     <ul className="divide-y divide-gray-100">
-                      {form.entrenadores_lista.map((ent, idx) => (
-                        <li key={idx} className="flex items-center justify-between p-3 hover:bg-white transition-colors group">
+                      {entrenadores.map((ent) => (
+                        <li key={ent.id} className="flex items-center justify-between p-3 hover:bg-white transition-colors group">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-[#001f3f]/10 flex items-center justify-center">
                               <span className="material-symbols-outlined text-[14px] text-[#001f3f]">person</span>
                             </div>
-                            <span className="text-sm text-gray-700 font-medium">{ent}</span>
+                            <span className="text-sm text-gray-700 font-medium">{ent.nombre}</span>
                           </div>
-                          <button type="button" onClick={() => setForm(prev => ({ ...prev, entrenadores_lista: prev.entrenadores_lista.filter((_, i) => i !== idx) }))}
+                          <button type="button" onClick={async () => {
+                            await supabase.from('entrenadores').delete().eq('id', ent.id);
+                            setEntrenadores(prev => prev.filter(e => e.id !== ent.id));
+                          }}
                             className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50">
                             <span className="material-symbols-outlined text-[16px]">delete</span>
                           </button>
@@ -629,40 +640,47 @@ export default function ConfigView() {
                     className={inputCls}
                     value={nuevoHorario}
                     onChange={e => setNuevoHorario(e.target.value)}
-                    onKeyDown={e => {
+                    onKeyDown={async e => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         if (!nuevoHorario.trim()) return;
-                        setForm(prev => ({ ...prev, horarios_lista: [...(prev.horarios_lista||[]), nuevoHorario.trim()] }));
+                        const val = nuevoHorario.trim();
                         setNuevoHorario('');
+                        const { data, error } = await supabase.from('horarios').insert({ descripcion: val }).select().single();
+                        if (!error && data) setHorarios(prev => [...prev, data]);
                       }
                     }}
                   />
-                  <button type="button" onClick={() => {
+                  <button type="button" onClick={async () => {
                     if (!nuevoHorario.trim()) return;
-                    setForm(prev => ({ ...prev, horarios_lista: [...(prev.horarios_lista||[]), nuevoHorario.trim()] }));
+                    const val = nuevoHorario.trim();
                     setNuevoHorario('');
+                    const { data, error } = await supabase.from('horarios').insert({ descripcion: val }).select().single();
+                    if (!error && data) setHorarios(prev => [...prev, data]);
                   }} className="px-3 py-2 bg-[#001f3f] text-white rounded-lg hover:bg-blue-900 font-bold transition-colors">
                     <span className="material-symbols-outlined text-[18px]">add</span>
                   </button>
                 </div>
                 <div className="border border-gray-200 rounded-xl max-h-56 overflow-y-auto bg-gray-50/50">
-                  {(!form.horarios_lista || form.horarios_lista.length === 0) ? (
+                  {horarios.length === 0 ? (
                     <div className="p-6 text-center">
                       <span className="material-symbols-outlined text-gray-300 text-3xl block mb-1">event_busy</span>
                       <p className="text-xs text-gray-400">No hay horarios registrados</p>
                     </div>
                   ) : (
                     <ul className="divide-y divide-gray-100">
-                      {form.horarios_lista.map((hor, idx) => (
-                        <li key={idx} className="flex items-center justify-between p-3 hover:bg-white transition-colors group">
+                      {horarios.map((hor) => (
+                        <li key={hor.id} className="flex items-center justify-between p-3 hover:bg-white transition-colors group">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center">
                               <span className="material-symbols-outlined text-[14px] text-orange-500">schedule</span>
                             </div>
-                            <span className="text-sm text-gray-700 font-medium">{hor}</span>
+                            <span className="text-sm text-gray-700 font-medium">{hor.descripcion}</span>
                           </div>
-                          <button type="button" onClick={() => setForm(prev => ({ ...prev, horarios_lista: prev.horarios_lista.filter((_, i) => i !== idx) }))}
+                          <button type="button" onClick={async () => {
+                            await supabase.from('horarios').delete().eq('id', hor.id);
+                            setHorarios(prev => prev.filter(h => h.id !== hor.id));
+                          }}
                             className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50">
                             <span className="material-symbols-outlined text-[16px]">delete</span>
                           </button>

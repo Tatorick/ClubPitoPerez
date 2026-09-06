@@ -5,24 +5,29 @@ export const DEMO_HOY = {
   mes:     _fechaHoy.toLocaleString('es-EC', { month: 'short' }).toUpperCase().replace('.', ''),
   anioMes: _fechaHoy.getMonth(),   // 0-indexed (0=Ene, 8=Sep, etc.)
   anio:    _fechaHoy.getFullYear(),
+  dia:     _fechaHoy.getDate(),
 };
 
 export const PENSION_ESTANDAR = 55.00;
 export const MATRICULA_ESTANDAR = 50.00;
 
+// El ciclo escolar empieza en Septiembre (mes 8).
+// Si estamos antes de Agosto (mes < 7), el ciclo inició el año pasado.
+const startYear = DEMO_HOY.anioMes < 7 ? DEMO_HOY.anio - 1 : DEMO_HOY.anio;
+
 export const MESES_BASE = [
-  { codigo: 'AGO', nombre: 'Agosto',      anio: 2024, mesIdx: 7,  tipo: 'matricula' },
-  { codigo: 'SEP', nombre: 'Septiembre',  anio: 2024, mesIdx: 8,  tipo: 'pension'   },
-  { codigo: 'OCT', nombre: 'Octubre',     anio: 2024, mesIdx: 9,  tipo: 'pension'   },
-  { codigo: 'NOV', nombre: 'Noviembre',   anio: 2024, mesIdx: 10, tipo: 'pension'   },
-  { codigo: 'DIC', nombre: 'Diciembre',   anio: 2024, mesIdx: 11, tipo: 'pension'   },
-  { codigo: 'ENE', nombre: 'Enero',       anio: 2025, mesIdx: 0,  tipo: 'pension'   },
-  { codigo: 'FEB', nombre: 'Febrero',     anio: 2025, mesIdx: 1,  tipo: 'pension'   },
-  { codigo: 'MAR', nombre: 'Marzo',       anio: 2025, mesIdx: 2,  tipo: 'pension'   },
-  { codigo: 'ABR', nombre: 'Abril',       anio: 2025, mesIdx: 3,  tipo: 'pension'   },
-  { codigo: 'MAY', nombre: 'Mayo',        anio: 2025, mesIdx: 4,  tipo: 'pension'   },
-  { codigo: 'JUN', nombre: 'Junio',       anio: 2025, mesIdx: 5,  tipo: 'pension'   },
-  { codigo: 'JUL', nombre: 'Julio',       anio: 2025, mesIdx: 6,  tipo: 'pension'   },
+  { codigo: 'MAT', nombre: 'Matrícula',   anio: startYear,     mesIdx: 8,  tipo: 'matricula' },
+  { codigo: 'SEP', nombre: 'Septiembre',  anio: startYear,     mesIdx: 8,  tipo: 'pension'   },
+  { codigo: 'OCT', nombre: 'Octubre',     anio: startYear,     mesIdx: 9,  tipo: 'pension'   },
+  { codigo: 'NOV', nombre: 'Noviembre',   anio: startYear,     mesIdx: 10, tipo: 'pension'   },
+  { codigo: 'DIC', nombre: 'Diciembre',   anio: startYear,     mesIdx: 11, tipo: 'pension'   },
+  { codigo: 'ENE', nombre: 'Enero',       anio: startYear + 1, mesIdx: 0,  tipo: 'pension'   },
+  { codigo: 'FEB', nombre: 'Febrero',     anio: startYear + 1, mesIdx: 1,  tipo: 'pension'   },
+  { codigo: 'MAR', nombre: 'Marzo',       anio: startYear + 1, mesIdx: 2,  tipo: 'pension'   },
+  { codigo: 'ABR', nombre: 'Abril',       anio: startYear + 1, mesIdx: 3,  tipo: 'pension'   },
+  { codigo: 'MAY', nombre: 'Mayo',        anio: startYear + 1, mesIdx: 4,  tipo: 'pension'   },
+  { codigo: 'JUN', nombre: 'Junio',       anio: startYear + 1, mesIdx: 5,  tipo: 'pension'   },
+  { codigo: 'JUL', nombre: 'Julio',       anio: startYear + 1, mesIdx: 6,  tipo: 'pension'   },
 ];
 
 /**
@@ -49,8 +54,10 @@ export function derivarEstadoMeses(transacciones, montoPensionCustom, montoMatri
 
   return MESES_BASE.map(mes => {
     const txn = mesCubierto[mes.codigo];
-    const esPasado  = mes.anio < anioActual || (mes.anio === anioActual && mes.mesIdx < mesActualIdx);
-    const esActual  = mes.anio === anioActual && mes.mesIdx === mesActualIdx;
+    const esPasado  = mes.anio < anioActual || 
+                      (mes.anio === anioActual && mes.mesIdx < mesActualIdx) ||
+                      (mes.anio === anioActual && mes.mesIdx === mesActualIdx && DEMO_HOY.dia > 10);
+    const esActual  = mes.anio === anioActual && mes.mesIdx === mesActualIdx && DEMO_HOY.dia <= 10;
     const esFuturo  = mes.anio > anioActual || (mes.anio === anioActual && mes.mesIdx > mesActualIdx);
 
     const valorCuota = mes.tipo === 'matricula' ? montoMatricula : montoPension;

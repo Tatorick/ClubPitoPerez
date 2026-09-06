@@ -527,7 +527,7 @@ export default function Perfil() {
         .from('fichas')
         .upload(fileName, compressedFile, { upsert: true });
 
-      if (uploadError) throw new Error('No se pudo subir la foto.');
+      if (uploadError) throw new Error('Storage: ' + uploadError.message);
 
       const { data: publicUrlData } = supabase.storage
         .from('fichas')
@@ -538,10 +538,12 @@ export default function Perfil() {
       // Actualizar BD
       const promesas = [];
       if (fichaData?.id) {
-        promesas.push(supabase.from('fichas').update({ foto_url: nuevaFotoUrl }).eq('id', fichaData.id));
+        const p1 = supabase.from('fichas').update({ foto_url: nuevaFotoUrl }).eq('id', fichaData.id).then(res => { if(res.error) throw new Error('DB Fichas: ' + res.error.message) });
+        promesas.push(p1);
       }
       if (miembroData?.id) {
-        promesas.push(supabase.from('miembros').update({ foto_url: nuevaFotoUrl }).eq('id', miembroData.id));
+        const p2 = supabase.from('miembros').update({ foto_url: nuevaFotoUrl }).eq('id', miembroData.id).then(res => { if(res.error) throw new Error('DB Miembros: ' + res.error.message) });
+        promesas.push(p2);
       }
 
       await Promise.all(promesas);
@@ -551,7 +553,7 @@ export default function Perfil() {
       loadAthleteData();
     } catch (err) {
       console.error(err);
-      alert('Error al actualizar la foto de perfil.');
+      alert('Error al actualizar la foto: ' + (err.message || 'Error desconocido'));
     } finally {
       setIsUploadingAvatar(false);
     }

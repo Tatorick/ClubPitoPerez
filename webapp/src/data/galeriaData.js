@@ -60,17 +60,17 @@ export const ALBUMES = [
   },
   {
     id: 'alb2',
-    titulo: 'Temporada 2024-2025',
-    fecha: 'Temporada 2024–2025',
+    titulo: 'Liga Nacional Absoluta de Voleibol 2026',
+    fecha: '2026',
     lugar: 'Cancha Principal, Pito Pérez V.C.',
     descripcion: 'El trabajo detrás de los resultados. Nuestra temporada en imágenes: esfuerzo, superación y compañerismo.',
     portada: FOTOS_TEMPORADA[0].url,
     portadaThumb: FOTOS_TEMPORADA[0].thumb,
-    categoria: 'Entrenamiento',
+    categoria: 'Competencia',
     resultado: null,
     fotos: FOTOS_TEMPORADA.map((p, i) => ({
       ...p,
-      titulo: `Temporada 2024-2025 — Foto ${i + 1}`,
+      titulo: `Liga Nacional Absoluta de Voleibol 2026 — Foto ${i + 1}`,
       descripcion: [
         'El inicio de una gran temporada.',
         'Trabajo técnico con el cuerpo técnico.',

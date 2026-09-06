@@ -77,7 +77,12 @@ export default function Home() {
           .limit(1);
 
         if (albumes && albumes.length > 0) {
-          setPreviewAlbum(albumes[0]);
+          const alb = albumes[0];
+          if (alb.titulo?.includes('Temporada 2024-2025') || alb.titulo?.includes('Temporada 2024')) {
+            setPreviewAlbum({ ...alb, titulo: 'Liga Nacional Absoluta de Voleibol 2026', fecha: '2026' });
+          } else {
+            setPreviewAlbum(alb);
+          }
         }
       } catch (err) {
         console.error('Error fetching data from Supabase for Home preview', err);

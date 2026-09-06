@@ -263,7 +263,21 @@ export default function Galeria() {
 
         if (error) throw error;
         if (data && data.length > 0) {
-          setAlbumes(data);
+          const mapped = data.map(alb => {
+            if (alb.titulo?.includes('Temporada 2024-2025') || alb.titulo?.includes('Temporada 2024')) {
+              supabase.from('galeria_albumes').update({
+                titulo: 'Liga Nacional Absoluta de Voleibol 2026',
+                fecha: '2026'
+              }).eq('id', alb.id).then();
+              return {
+                ...alb,
+                titulo: 'Liga Nacional Absoluta de Voleibol 2026',
+                fecha: '2026'
+              };
+            }
+            return alb;
+          });
+          setAlbumes(mapped);
         } else {
           setAlbumes(ALBUMES); // Fallback
         }

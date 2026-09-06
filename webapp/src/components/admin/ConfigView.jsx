@@ -109,13 +109,11 @@ export default function ConfigView() {
 
   const validate = () => {
     const errs = {};
-    if (!form.razon_social.trim()) errs.razon_social = 'La razón social es obligatoria';
-    if (!form.ruc.trim() || !/^\d{13}$/.test(form.ruc.trim()))
+    if (form.ruc?.trim() && !/^\d{13}$/.test(form.ruc.trim()))
       errs.ruc = 'El RUC debe tener exactamente 13 dígitos';
-    if (!form.direccion_matriz.trim()) errs.direccion_matriz = 'La dirección es obligatoria';
-    if (!/^\d{3}$/.test(form.cod_establecimiento))
+    if (form.cod_establecimiento?.trim() && !/^\d{3}$/.test(form.cod_establecimiento.trim()))
       errs.cod_establecimiento = 'Debe ser exactamente 3 dígitos (ej: 001)';
-    if (!/^\d{3}$/.test(form.cod_punto_emision))
+    if (form.cod_punto_emision?.trim() && !/^\d{3}$/.test(form.cod_punto_emision.trim()))
       errs.cod_punto_emision = 'Debe ser exactamente 3 dígitos (ej: 001)';
     return errs;
   };

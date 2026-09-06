@@ -12,8 +12,8 @@ export const PENSION_ESTANDAR = 55.00;
 export const MATRICULA_ESTANDAR = 50.00;
 
 // El ciclo escolar empieza en Septiembre (mes 8).
-// Si estamos antes de Agosto (mes < 7), el ciclo inició el año pasado.
-const startYear = DEMO_HOY.anioMes < 7 ? DEMO_HOY.anio - 1 : DEMO_HOY.anio;
+// Si estamos antes de Septiembre (mes < 8), el ciclo inició el año pasado.
+const startYear = DEMO_HOY.anioMes < 8 ? DEMO_HOY.anio - 1 : DEMO_HOY.anio;
 
 export const MESES_BASE = [
   { codigo: 'MAT', nombre: 'Matrícula',   anio: startYear,     mesIdx: 8,  tipo: 'matricula' },
@@ -28,6 +28,7 @@ export const MESES_BASE = [
   { codigo: 'MAY', nombre: 'Mayo',        anio: startYear + 1, mesIdx: 4,  tipo: 'pension'   },
   { codigo: 'JUN', nombre: 'Junio',       anio: startYear + 1, mesIdx: 5,  tipo: 'pension'   },
   { codigo: 'JUL', nombre: 'Julio',       anio: startYear + 1, mesIdx: 6,  tipo: 'pension'   },
+  { codigo: 'AGO', nombre: 'Agosto',      anio: startYear + 1, mesIdx: 7,  tipo: 'pension'   },
 ];
 
 /**

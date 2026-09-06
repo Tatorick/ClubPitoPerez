@@ -141,7 +141,7 @@ export default function Registro() {
   const [formData, setFormData] = useState({
     // Paso 1
     email: '', password: '', confirmPassword: '',
-    nombresJugador: '', cedulaJugador: '', fechaNacimientoJugador: '',
+    nombresJugador: '', apellidosJugador: '', cedulaJugador: '', fechaNacimientoJugador: '',
     genero: '', nacionalidad: 'ECUATORIANA', direccion: '',
     // Paso 2
     discapacidad: 'NO', tipoDiscapacidad: '', porcentajeDiscapacidad: '',
@@ -175,8 +175,10 @@ export default function Registro() {
         errs.password = 'La contraseña debe tener al menos 8 caracteres, incluir letras y números';
       if (formData.password !== formData.confirmPassword)
         errs.confirmPassword = 'Las contraseñas no coinciden';
-      if (!formData.nombresJugador.trim() || formData.nombresJugador.trim().length < 5)
-        errs.nombresJugador = 'Ingresa el nombre completo (apellidos y nombres, mínimo 5 caracteres)';
+      if (!formData.nombresJugador.trim() || formData.nombresJugador.trim().length < 3)
+        errs.nombresJugador = 'Ingresa los nombres (mínimo 3 caracteres)';
+      if (!formData.apellidosJugador.trim() || formData.apellidosJugador.trim().length < 3)
+        errs.apellidosJugador = 'Ingresa los apellidos (mínimo 3 caracteres)';
       if (!validarCedulaEC(formData.cedulaJugador))
         errs.cedulaJugador = 'La cédula no es válida. Debe ser ecuatoriana de 10 dígitos con dígito verificador correcto';
       if (!formData.fechaNacimientoJugador)
@@ -248,9 +250,11 @@ export default function Registro() {
     setSubmitLoading(true);
     setSubmitError('');
     try {
+      const nombreCompletoJugador = `${formData.apellidosJugador.trim()} ${formData.nombresJugador.trim()}`;
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim(), password: formData.password,
-        options: { data: { nombre: formData.nombresJugador.trim() } },
+        options: { data: { nombre: nombreCompletoJugador } },
       });
       if (authError) throw new Error(authError.message);
       const userId = authData.user?.id;
@@ -283,7 +287,7 @@ export default function Registro() {
 
       const { error: insertError } = await supabase.from('fichas').insert({
         user_id: userId, foto_url: fotoUrl,
-        nombres_jugador: formData.nombresJugador.trim(), cedula_jugador: formData.cedulaJugador.trim(),
+        nombres_jugador: nombreCompletoJugador, cedula_jugador: formData.cedulaJugador.trim(),
         fecha_nacimiento: formData.fechaNacimientoJugador, genero: formData.genero,
         nacionalidad: formData.nacionalidad.trim(), direccion: formData.direccion.trim(),
         discapacidad: formData.discapacidad, tipo_discapacidad: formData.tipoDiscapacidad || null,
@@ -401,12 +405,15 @@ export default function Registro() {
                     <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">Datos del jugador/a</p>
                   </div>
 
-                  <div className="md:col-span-2">
-                    <Field label="Nombres Completos del Jugador/a" error={fieldErrors.nombresJugador} required>
-                      <input type="text" name="nombresJugador" value={formData.nombresJugador} onChange={handleChange}
-                        placeholder="Apellidos y Nombres completos" className={ic('nombresJugador')} />
-                    </Field>
-                  </div>
+                  <Field label="Nombres del Jugador/a" error={fieldErrors.nombresJugador} required>
+                    <input type="text" name="nombresJugador" value={formData.nombresJugador} onChange={handleChange}
+                      placeholder="Ej. Juan Carlos" className={ic('nombresJugador')} />
+                  </Field>
+
+                  <Field label="Apellidos del Jugador/a" error={fieldErrors.apellidosJugador} required>
+                    <input type="text" name="apellidosJugador" value={formData.apellidosJugador} onChange={handleChange}
+                      placeholder="Ej. Pérez Gómez" className={ic('apellidosJugador')} />
+                  </Field>
 
                   <Field label="Cédula de Identidad" error={fieldErrors.cedulaJugador} required>
                     <input type="text" name="cedulaJugador" value={formData.cedulaJugador} onChange={handleChange}

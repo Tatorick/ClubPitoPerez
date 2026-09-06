@@ -400,68 +400,12 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose, miembro }) {
             Guardar Pago
           </button>
         </div>
-          </div>
-        </div>
-
-        {isEditing ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10 max-w-2xl">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Entrenador Asignado</label>
-              <select
-                value={data.entrenador_asignado}
-                onChange={(e) => setData({...data, entrenador_asignado: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 bg-white transition-all shadow-sm"
-              >
-                <option value="">— Seleccionar Entrenador —</option>
-                {catalogos.entrenadores.map((ent, i) => (
-                  <option key={i} value={ent}>{ent}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Grupo y Horario</label>
-              <select
-                value={data.grupo_horario}
-                onChange={(e) => setData({...data, grupo_horario: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 bg-white transition-all shadow-sm"
-              >
-                <option value="">— Seleccionar Horario —</option>
-                {catalogos.horarios.map((hor, i) => (
-                  <option key={i} value={hor}>{hor}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-10 max-w-2xl">
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Entrenador Asignado</p>
-              <p className="text-base font-semibold text-gray-800">
-                {member.entrenador_asignado ? (
-                  <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[18px] text-green-500">check_circle</span> {member.entrenador_asignado}</span>
-                ) : (
-                  <span className="flex items-center gap-2 text-gray-400"><span className="material-symbols-outlined text-[18px]">pending</span> No asignado</span>
-                )}
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Horario y Grupo</p>
-              <p className="text-base font-semibold text-gray-800">
-                {member.grupo_horario ? (
-                  <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[18px] text-green-500">check_circle</span> {member.grupo_horario}</span>
-                ) : (
-                  <span className="flex items-center gap-2 text-gray-400"><span className="material-symbols-outlined text-[18px]">pending</span> No asignado</span>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-// ─── Pestañas Existentes ─────────────────────────────────────────────────────────────
+// ─── Tab de Pagos ─────────────────────────────────────────────────────────────
 function PagosTab({ member, onUpdateMember }) {
   const [receiptOpen, setReceiptOpen] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -807,10 +751,145 @@ function PagosTab({ member, onUpdateMember }) {
   );
 }
 
-// ─── Tab Ficha ────────────────────────────────────────────────────────────────
-function FichaTab({ member, onUpdateMember }) {
+// ─── Tab Asignación Deportiva ────────────────────────────────────────────────
+function AsignacionTab({ member, onUpdateMember }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [data, setData] = useState({
+    entrenador_asignado: member.entrenador_asignado || '',
+    grupo_horario: member.grupo_horario || ''
+  });
+  const [saving, setSaving] = useState(false);
   const [catalogos, setCatalogos] = useState({ entrenadores: [], horarios: [] });
 
+  useEffect(() => {
+    async function loadCatalogos() {
+      const [{ data: ents }, { data: hors }] = await Promise.all([
+        supabase.from('entrenadores').select('*').order('id'),
+        supabase.from('horarios').select('*').order('id')
+      ]);
+      setCatalogos({
+        entrenadores: (ents || []).map(e => e.nombre),
+        horarios: (hors || []).map(h => h.descripcion)
+      });
+    }
+    loadCatalogos();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: resData, error } = await supabase
+        .from('miembros')
+        .update({
+          entrenador_asignado: data.entrenador_asignado,
+          grupo_horario: data.grupo_horario
+        })
+        .eq('id', member.id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      if (onUpdateMember) onUpdateMember({ ...member, ...resData });
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error guardando asignacion:', err);
+      alert('Error al guardar la asignación. Intenta de nuevo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6 animate-fade-in">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm relative overflow-hidden">
+        <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-100">
+          <h4 className="flex items-center gap-2 text-sm font-bold text-[#001f3f] uppercase tracking-wider">
+            <span className="material-symbols-outlined text-[20px] text-orange-500">sports</span> 
+            Asignación Deportiva
+          </h4>
+          <div>
+            {isEditing ? (
+              <div className="flex gap-2 relative z-10">
+                <button onClick={() => setIsEditing(false)} disabled={saving}
+                  className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={handleSave} disabled={saving}
+                  className="px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 shadow-sm shadow-orange-200">
+                  {saving ? <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-[14px]">save</span>}
+                  {saving ? 'Guardando' : 'Guardar'}
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setIsEditing(true)}
+                className="px-4 py-2 text-xs font-bold text-[#001f3f] bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2 shadow-sm relative z-10">
+                <span className="material-symbols-outlined text-[14px]">edit</span> 
+                Modificar Asignación
+              </button>
+            )}
+          </div>
+        </div>
+
+        {isEditing ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10 max-w-2xl">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Entrenador Asignado</label>
+              <select
+                value={data.entrenador_asignado}
+                onChange={(e) => setData({...data, entrenador_asignado: e.target.value})}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 bg-white transition-all shadow-sm"
+              >
+                <option value="">— Seleccionar Entrenador —</option>
+                {catalogos.entrenadores.map((ent, i) => (
+                  <option key={i} value={ent}>{ent}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Grupo y Horario</label>
+              <select
+                value={data.grupo_horario}
+                onChange={(e) => setData({...data, grupo_horario: e.target.value})}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 bg-white transition-all shadow-sm"
+              >
+                <option value="">— Seleccionar Horario —</option>
+                {catalogos.horarios.map((hor, i) => (
+                  <option key={i} value={hor}>{hor}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-10 max-w-2xl">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Entrenador Asignado</p>
+              <p className="text-base font-semibold text-gray-800">
+                {member.entrenador_asignado ? (
+                  <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[18px] text-green-500">check_circle</span> {member.entrenador_asignado}</span>
+                ) : (
+                  <span className="flex items-center gap-2 text-gray-400"><span className="material-symbols-outlined text-[18px]">pending</span> No asignado</span>
+                )}
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Horario y Grupo</p>
+              <p className="text-base font-semibold text-gray-800">
+                {member.grupo_horario ? (
+                  <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[18px] text-green-500">check_circle</span> {member.grupo_horario}</span>
+                ) : (
+                  <span className="flex items-center gap-2 text-gray-400"><span className="material-symbols-outlined text-[18px]">pending</span> No asignado</span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab Ficha ────────────────────────────────────────────────────────────────
+function FichaTab({ member, onUpdateMember }) {
   // ─── Edición ficha ────────────────────────────────────────────────────────
   const [isEditingFicha, setIsEditingFicha] = useState(false);
   const [fichaForm, setFichaForm] = useState({ ...member });
@@ -868,44 +947,6 @@ function FichaTab({ member, onUpdateMember }) {
     }
   };
 
-  useEffect(() => {
-    async function loadCatalogos() {
-      const [{ data: ents }, { data: hors }] = await Promise.all([
-        supabase.from('entrenadores').select('*').order('id'),
-        supabase.from('horarios').select('*').order('id')
-      ]);
-      setCatalogos({
-        entrenadores: (ents || []).map(e => e.nombre),
-        horarios: (hors || []).map(h => h.descripcion)
-      });
-    }
-    loadCatalogos();
-  }, []);
-
-  const handleSaveAsignacion = async () => {
-    setSavingAsignacion(true);
-    try {
-      const { data, error } = await supabase
-        .from('miembros')
-        .update({
-          entrenador_asignado: asignacionData.entrenador_asignado,
-          grupo_horario: asignacionData.grupo_horario
-        })
-        .eq('id', member.id)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      if (onUpdateMember) onUpdateMember({ ...member, ...data });
-      setIsEditingAsignacion(false);
-    } catch (err) {
-      console.error('Error guardando asignacion:', err);
-      alert('Error al guardar asignación deportiva');
-    } finally {
-      setSavingAsignacion(false);
-    }
-  };
-
   return (
     <div className="p-6" id="ficha-print-area">
       <div className="flex justify-between items-center mb-4 print:hidden gap-2">
@@ -951,6 +992,8 @@ function FichaTab({ member, onUpdateMember }) {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        
 
 
         {/* ── Vista de lectura vs edición ── */}
@@ -1216,7 +1259,7 @@ export default function MemberModal({ member: initialMember, onClose, onDelete }
           {/* Contenido */}
           <div className="overflow-y-auto flex-1">
             {tab === 'pagos' && <PagosTab member={member} onUpdateMember={setMember} />}
-            {tab === 'asignacion' && <AsignacionTab member={member} onUpdateMember={setMember} catalogos={catalogos} />}
+            {tab === 'asignacion' && <AsignacionTab member={member} onUpdateMember={setMember} />}
             {tab === 'ficha' && <FichaTab member={member} onUpdateMember={setMember} />}
           </div>
         </div>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import MemberModal from '../components/admin/MemberModal';
 import NewMemberModal from '../components/admin/NewMemberModal';
 import ConfigView from '../components/admin/ConfigView';
-import { derivarEstadoMeses } from '../utils/pagos';
+import { derivarEstadoMeses, startYear } from '../utils/pagos';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -391,7 +391,7 @@ export default function Admin() {
               {activeTab === 'miembros' ? 'Directorio de Miembros'  : ''}
               {activeTab === 'config'   ? 'Ajustes del Club'        : ''}
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Año lectivo 2024 - 2025</p>
+            <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Año lectivo {startYear} - {startYear + 1}</p>
           </div>
           <div className="flex items-center gap-2">
             <button className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">

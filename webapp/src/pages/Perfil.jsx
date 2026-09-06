@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { derivarEstadoMeses } from '../utils/pagos';
+import { derivarEstadoMeses, startYear } from '../utils/pagos';
 import { compressImage } from '../utils/imageCompression';
 import EditFichaModal from '../components/perfil/EditFichaModal';
 
@@ -721,7 +721,7 @@ export default function Perfil() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Año Lectivo / Temporada Deportiva 2024 – 2025 (Sep a Jul)
+                    Año Lectivo / Temporada Deportiva {startYear} – {startYear + 1} (Sep a Ago)
                   </p>
                 </div>
                 <button

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { derivarEstadoMeses } from '../../utils/pagos';
+import { derivarEstadoMeses, startYear } from '../../utils/pagos';
 import { supabase } from '../../lib/supabase';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
@@ -896,7 +896,7 @@ function FichaTab({ member, onUpdateMember }) {
         <div>
           <p className="text-xs font-bold text-orange-500 uppercase tracking-widest">Ficha de Matriculación — {member.categoria}</p>
           <h2 className="text-xl font-bold text-gray-800 mt-0.5">{member.nombres}</h2>
-          <p className="text-sm text-gray-500">C.I.: {member.cedula} · Año Lectivo 2024–2025</p>
+          <p className="text-sm text-gray-500">C.I.: {member.cedula} · Año Lectivo {startYear}–{startYear + 1}</p>
         </div>
       </div>
 
@@ -932,35 +932,29 @@ function FichaTab({ member, onUpdateMember }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
               <div>
                 <label className="block text-xs font-bold text-orange-900 mb-1">Entrenador Asignado</label>
-                <input
-                  type="text"
-                  list="lista-entrenadores"
+                <select
                   value={asignacionData.entrenador_asignado}
                   onChange={(e) => setAsignacionData({...asignacionData, entrenador_asignado: e.target.value})}
                   className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-orange-500 bg-white"
-                  placeholder="Selecciona o escribe..."
-                />
-                <datalist id="lista-entrenadores">
+                >
+                  <option value="">— Seleccionar —</option>
                   {catalogos.entrenadores.map((ent, i) => (
-                    <option key={i} value={ent} />
+                    <option key={i} value={ent}>{ent}</option>
                   ))}
-                </datalist>
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-orange-900 mb-1">Grupo y Horario</label>
-                <input
-                  type="text"
-                  list="lista-horarios"
+                <select
                   value={asignacionData.grupo_horario}
                   onChange={(e) => setAsignacionData({...asignacionData, grupo_horario: e.target.value})}
                   className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-orange-500 bg-white"
-                  placeholder="Selecciona o escribe..."
-                />
-                <datalist id="lista-horarios">
+                >
+                  <option value="">— Seleccionar —</option>
                   {catalogos.horarios.map((hor, i) => (
-                    <option key={i} value={hor} />
+                    <option key={i} value={hor}>{hor}</option>
                   ))}
-                </datalist>
+                </select>
               </div>
             </div>
           ) : (

@@ -34,6 +34,7 @@ export default function ConfigView() {
   const [logoUploading, setLogoUploading] = useState(false);
   const logoRef = useRef(null);
 
+  const [configId, setConfigId] = useState(null);
   const [form, setForm] = useState({
     razon_social: '',
     ruc: '',
@@ -68,6 +69,7 @@ export default function ConfigView() {
       setLoading(true);
       const { data, error } = await supabase.from('config_club').select('*').maybeSingle();
       if (!error && data) {
+        if (data.id) setConfigId(data.id);
         setForm(prev => ({
           ...prev,
           razon_social:               data.razon_social || '',
@@ -192,13 +194,20 @@ export default function ConfigView() {
   };
 
   const handleSave = async () => {
+    if (activeTab === 'deportivo') {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      return;
+    }
+
     const errs = validate();
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setSaving(true);
     setSaveError('');
     setSaveSuccess(false);
-    const { error } = await supabase.from('config_club').update({
+
+    const payload = {
       razon_social:               form.razon_social?.trim() || 'Club',
       ruc:                        form.ruc?.trim() || '9999999999999',
       nombre_comercial:           form.nombre_comercial?.trim() || form.razon_social?.trim() || 'Club',
@@ -215,7 +224,25 @@ export default function ConfigView() {
       cod_establecimiento:        form.cod_establecimiento?.trim() || '001',
       cod_punto_emision:          form.cod_punto_emision?.trim() || '001',
       tarifa_iva:                 form.tarifa_iva || '0',
-    }).eq('singleton', true);
+    };
+
+    let error = null;
+    if (configId) {
+      const res = await supabase.from('config_club').update(payload).eq('id', configId);
+      error = res.error;
+    } else {
+      const { data: existing } = await supabase.from('config_club').select('id').maybeSingle();
+      if (existing?.id) {
+        setConfigId(existing.id);
+        const res = await supabase.from('config_club').update(payload).eq('id', existing.id);
+        error = res.error;
+      } else {
+        const res = await supabase.from('config_club').insert([payload]).select().maybeSingle();
+        if (res.data?.id) setConfigId(res.data.id);
+        error = res.error;
+      }
+    }
+
     setSaving(false);
     if (error) {
       setSaveError(`Error al guardar: ${error.message}`);
@@ -780,9 +807,11 @@ export default function ConfigView() {
 
         {/* ── Barra de guardado inferior ── */}
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between gap-4">
-          <p className="text-xs text-gray-400 hidden sm:block">
+          <p className="text-xs text-gray-500 hidden sm:block">
             {activeTab === 'facturacion'
               ? 'Los cambios aplican a las próximas facturas emitidas.'
+              : activeTab === 'deportivo'
+              ? '✅ Los cambios en entrenadores y horarios se guardan automáticamente al agregarlos o eliminarlos.'
               : 'Los cambios se guardan en la base de datos del club.'}
           </p>
           <button type="button" onClick={handleSave} disabled={saving}

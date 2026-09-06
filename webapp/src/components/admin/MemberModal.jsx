@@ -889,8 +889,8 @@ function FichaTab({ member, onUpdateMember }) {
 
       <div className="flex items-center gap-4 mb-6 pb-5 border-b-2 border-[#001f3f]">
         <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center overflow-hidden shrink-0">
-          {member.foto
-            ? <img src={member.foto} alt="Foto" className="w-full h-full object-cover" />
+          {member.foto_url
+            ? <img src={member.foto_url} alt="Foto" className="w-full h-full object-cover" />
             : <span className="material-symbols-outlined text-4xl text-gray-400">person</span>}
         </div>
         <div>
@@ -1171,9 +1171,10 @@ export default function MemberModal({ member: initialMember, onClose, onDelete }
     <>
       <style>{`
         @media print {
-          body > *:not(#member-modal-root) { display: none !important; }
-          #member-modal-root .print\\:hidden { display: none !important; }
-          #member-modal-root { position: static !important; background: white !important; overflow: visible !important; }
+          body * { visibility: hidden; }
+          #ficha-print-area, #ficha-print-area * { visibility: visible; }
+          #ficha-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          .print\\:hidden, .print\\:hidden * { display: none !important; }
         }
       `}</style>
 

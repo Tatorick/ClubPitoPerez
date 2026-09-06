@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { compressImage } from '../utils/imageCompression';
 
 // ── Clases reutilizables ───────────────────────────────────────────────────────
 const inputBase = "w-full border rounded-lg px-3 py-2.5 text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all text-sm";
@@ -53,17 +54,24 @@ function validarEmail(email) {
 function PhotoUploader({ value, onChange }) {
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen supera el límite de 5 MB. Usa una imagen más pequeña.');
-      return;
+    
+    setIsCompressing(true);
+    try {
+      const compressedFile = await compressImage(file, 1024, 1024, 0.7);
+      const reader = new FileReader();
+      reader.onload = (ev) => onChange(ev.target.result, compressedFile);
+      reader.readAsDataURL(compressedFile);
+    } catch (err) {
+      console.error('Error al comprimir la imagen:', err);
+      alert('Hubo un error al procesar la imagen. Intenta con otra.');
+    } finally {
+      setIsCompressing(false);
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => onChange(ev.target.result, file);
-    reader.readAsDataURL(file);
   };
 
   return (
@@ -91,10 +99,12 @@ function PhotoUploader({ value, onChange }) {
             <span className="material-symbols-outlined text-[20px]">photo_camera</span>
             Tomar foto con la cámara
           </button>
-          <p className="text-xs text-gray-500">JPG o PNG, máximo 5MB. Fondo claro recomendado.</p>
+          <p className="text-xs text-gray-500">
+            {isCompressing ? 'Comprimiendo imagen...' : 'JPG o PNG. Se comprimirá automáticamente. Fondo claro recomendado.'}
+          </p>
         </div>
-        <input ref={fileRef}   type="file" accept="image/*"               className="hidden" onChange={handleFile} />
-        <input ref={cameraRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFile} />
+        <input ref={fileRef}   type="file" accept="image/*"               className="hidden" onChange={handleFile} disabled={isCompressing} />
+        <input ref={cameraRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFile} disabled={isCompressing} />
       </div>
     </div>
   );

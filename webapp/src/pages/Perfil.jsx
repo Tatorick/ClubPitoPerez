@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { derivarEstadoMeses } from '../utils/pagos';
+import { compressImage } from '../utils/imageCompression';
 
 // ── Config de estilos por estado de mes ───────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -93,6 +94,7 @@ function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
   const cameraRef = useRef(null);
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
@@ -122,17 +124,23 @@ function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
     );
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('La foto es muy pesada. Por favor toma otra foto o selecciona una imagen más ligera.');
-      return;
+
+    setIsCompressing(true);
+    try {
+      const compressedFile = await compressImage(file, 1600, 1600, 0.8);
+      setFotoFile(compressedFile);
+      const reader = new FileReader();
+      reader.onload = ev => setFotoPreview(ev.target.result);
+      reader.readAsDataURL(compressedFile);
+    } catch (err) {
+      console.error('Error al comprimir la imagen:', err);
+      alert('Hubo un error al procesar la imagen. Intenta con otra.');
+    } finally {
+      setIsCompressing(false);
     }
-    setFotoFile(file);
-    const reader = new FileReader();
-    reader.onload = ev => setFotoPreview(ev.target.result);
-    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
@@ -310,7 +318,8 @@ function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
                 <button
                   type="button"
                   onClick={() => cameraRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/50 text-orange-900 hover:bg-orange-100 hover:border-orange-500 transition-all group"
+                  disabled={isCompressing}
+                  className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/50 text-orange-900 hover:bg-orange-100 hover:border-orange-500 transition-all group disabled:opacity-50"
                 >
                   <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-[24px]">photo_camera</span>
@@ -322,7 +331,8 @@ function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 text-blue-900 hover:bg-blue-100 hover:border-blue-500 transition-all group"
+                  disabled={isCompressing}
+                  className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 text-blue-900 hover:bg-blue-100 hover:border-blue-500 transition-all group disabled:opacity-50"
                 >
                   <div className="w-12 h-12 rounded-full bg-[#001f3f] text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-[24px]">upload_file</span>
@@ -333,8 +343,14 @@ function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
               </div>
             )}
 
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+            {isCompressing && (
+              <p className="text-xs text-orange-600 font-bold mt-2 animate-pulse text-center">
+                Comprimiendo imagen...
+              </p>
+            )}
+
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isCompressing} />
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} disabled={isCompressing} />
           </div>
 
           {/* Opciones opcionales / avanzadas */}

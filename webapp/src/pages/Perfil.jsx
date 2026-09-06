@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { derivarEstadoMeses } from '../utils/pagos';
 import { compressImage } from '../utils/imageCompression';
+import EditFichaModal from '../components/perfil/EditFichaModal';
 
 // ── Config de estilos por estado de mes ───────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -437,8 +438,12 @@ export default function Perfil() {
   const [transacciones, setTransacciones] = useState([]);
   
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [receiptModal, setReceiptModal] = useState(null);
   const [notification, setNotification] = useState('');
+  
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarFileRef = useRef(null);
 
   // Cargar datos del usuario desde Supabase — queries en paralelo
   const loadAthleteData = async () => {
@@ -508,6 +513,50 @@ export default function Perfil() {
     loadAthleteData();
   };
 
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const compressedFile = await compressImage(file, 800, 800, 0.8);
+      const fileExt = compressedFile.name.split('.').pop() || 'jpg';
+      const fileName = `${miembroData?.cedula || fichaData?.cedula_jugador}-avatar-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('fichas')
+        .upload(fileName, compressedFile, { upsert: true });
+
+      if (uploadError) throw new Error('No se pudo subir la foto.');
+
+      const { data: publicUrlData } = supabase.storage
+        .from('fichas')
+        .getPublicUrl(fileName);
+
+      const nuevaFotoUrl = publicUrlData.publicUrl;
+
+      // Actualizar BD
+      const promesas = [];
+      if (fichaData?.id) {
+        promesas.push(supabase.from('fichas').update({ foto_url: nuevaFotoUrl }).eq('id', fichaData.id));
+      }
+      if (miembroData?.id) {
+        promesas.push(supabase.from('miembros').update({ foto_url: nuevaFotoUrl }).eq('id', miembroData.id));
+      }
+
+      await Promise.all(promesas);
+
+      setNotification('¡Foto de perfil actualizada!');
+      setTimeout(() => setNotification(''), 5000);
+      loadAthleteData();
+    } catch (err) {
+      console.error(err);
+      alert('Error al actualizar la foto de perfil.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   // Beca y Pensión personalizada — solo desde base de datos, nunca por nombre
   const montoPension = Number(miembroData?.monto_pension ?? 55.00);
   const tieneBeca = miembroData?.tiene_beca === true || (miembroData && montoPension < 55.00);
@@ -574,8 +623,13 @@ export default function Perfil() {
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 z-10">
             {/* Foto / Avatar */}
-            <div className="relative">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white bg-[#001f3f] flex items-center justify-center shadow-xl ring-4 ring-orange-500/20">
+            <div className="relative group">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white bg-[#001f3f] flex items-center justify-center shadow-xl ring-4 ring-orange-500/20 relative">
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                    <span className="material-symbols-outlined text-white animate-spin">progress_activity</span>
+                  </div>
+                )}
                 {fotoUrl ? (
                   <img src={fotoUrl} alt={nombreCompleto} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                 ) : (
@@ -583,8 +637,13 @@ export default function Perfil() {
                     {nombreCompleto.split(' ').map(n => n[0]).slice(0, 2).join('')}
                   </span>
                 )}
+                <div onClick={() => avatarFileRef.current?.click()} className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10">
+                  <span className="material-symbols-outlined text-white">photo_camera</span>
+                  <span className="text-[10px] text-white font-bold mt-1">Cambiar Foto</span>
+                </div>
               </div>
-              <span className="absolute bottom-1 right-2 w-6 h-6 bg-green-500 border-4 border-white rounded-full shadow-sm" title="Miembro Activo" />
+              <input ref={avatarFileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+              <span className="absolute bottom-1 right-2 w-6 h-6 bg-green-500 border-4 border-white rounded-full shadow-sm z-20" title="Miembro Activo" />
             </div>
 
             {/* Info y Saludo */}
@@ -615,6 +674,13 @@ export default function Perfil() {
 
           {/* Botones de acción Header */}
           <div className="flex flex-wrap items-center gap-3 z-10 w-full sm:w-auto">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-300 text-gray-700 font-bold text-sm shadow-sm hover:bg-gray-50 transition-all"
+            >
+              <span className="material-symbols-outlined text-[20px] text-orange-500">edit_document</span>
+              Actualizar Ficha
+            </button>
             <button
               onClick={() => setShowUploadModal(true)}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-orange-500 text-white font-bold text-sm shadow-md hover:bg-orange-600 hover:-translate-y-0.5 transition-all"
@@ -900,6 +966,20 @@ export default function Perfil() {
           transaccion={receiptModal.transaccion}
           mesCodigo={receiptModal.mesCodigo}
           onClose={() => setReceiptModal(null)}
+        />
+      )}
+
+      {showEditModal && (
+        <EditFichaModal
+          fichaData={fichaData}
+          miembroData={miembroData}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setNotification('¡Ficha actualizada exitosamente!');
+            setTimeout(() => setNotification(''), 5000);
+            loadAthleteData();
+          }}
         />
       )}
     </div>

@@ -46,7 +46,7 @@ export const GRUPOS = {
   },
   'SUB 12 DAMAS': {
     nombre: 'Sub 12 Damas',
-    profesor: 'Prof. Leo Pieroni',
+    profesor: 'Por confirmar',
     anios: '2014 2016',
     estilo: 'bg-rose-50 text-rose-700 border-rose-200'
   },

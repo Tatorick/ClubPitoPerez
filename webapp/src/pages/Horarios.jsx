@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GRUPOS, HORARIOS_SEMANA, HORARIOS_SABADO } from '../data/horariosData';
 
 export default function Horarios() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -15,10 +16,28 @@ export default function Horarios() {
     document.body.style.overflow = 'auto';
   };
 
+  // Función para renderizar la celda de un grupo de forma elegante
+  const renderCell = (grupoId) => {
+    if (!grupoId) return <td className="p-4 bg-surface/30"></td>;
+    const grupo = GRUPOS[grupoId];
+    if (!grupo) return <td className="p-4">{grupoId}</td>;
+    
+    return (
+      <td className={`p-4 border-l-4 ${grupo.estilo.replace('border-', 'border-l-')} bg-white/50 backdrop-blur-sm transition-all hover:shadow-md cursor-default group`}>
+        <div className="flex flex-col h-full justify-center">
+          <span className="font-bold text-sm leading-tight group-hover:scale-105 transition-transform origin-left">{grupo.nombre}</span>
+          {grupo.profesor && <span className="text-[11px] opacity-80 mt-1">{grupo.profesor}</span>}
+          {grupo.anios && <span className="text-[10px] font-semibold opacity-60 mt-0.5">{grupo.anios}</span>}
+        </div>
+      </td>
+    );
+  };
+
   return (
     <div className="bg-background text-on-background font-body-md w-full max-w-[1280px] mx-auto px-margin-mobile md:px-margin-desktop py-section-gap flex flex-col gap-section-gap">
       {/* Hero Section */}
-      <section className="text-center flex flex-col items-center gap-gutter">
+      <section className="text-center flex flex-col items-center gap-gutter relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-32 bg-primary/5 blur-3xl -z-10 rounded-full pointer-events-none"></div>
         <h1 className="font-display-lg text-display-lg text-primary">Entrena como un Profesional.</h1>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
           Explora nuestros horarios de entrenamiento de élite y niveles de membresía diseñados para elevar tu juego al siguiente nivel.
@@ -27,49 +46,58 @@ export default function Horarios() {
 
       {/* Schedule Section */}
       <section className="flex flex-col gap-gutter">
-        <h2 className="font-headline-lg text-headline-lg text-primary border-b border-outline-variant pb-2">Horario Semanal de Entrenamiento</h2>
-        <div className="overflow-x-auto bg-surface border border-outline-variant rounded-lg shadow-[0_4px_4px_rgba(0,0,0,0.05)]">
-          <table className="w-full text-left border-collapse min-w-[600px]">
+        <h2 className="font-headline-lg text-headline-lg text-primary border-b border-outline-variant pb-2 flex items-center gap-2">
+          <span className="material-symbols-outlined text-secondary">calendar_month</span>
+          Horario Semanal de Entrenamiento
+        </h2>
+        
+        <div className="overflow-x-auto bg-surface/80 backdrop-blur-md border border-outline-variant rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-1">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-surface-variant text-on-surface font-label-bold text-label-bold">
-                <th className="p-4 border-b border-outline-variant">Hora</th>
-                <th className="p-4 border-b border-outline-variant">Lunes</th>
-                <th className="p-4 border-b border-outline-variant">Miércoles</th>
-                <th className="p-4 border-b border-outline-variant">Viernes</th>
-                <th className="p-4 border-b border-outline-variant">Sábado</th>
+              <tr className="bg-surface-variant/50 text-on-surface font-label-bold text-label-bold uppercase tracking-wider text-xs">
+                <th className="p-4 border-b border-outline-variant/50 rounded-tl-xl w-32">Hora</th>
+                <th className="p-4 border-b border-outline-variant/50">Lunes</th>
+                <th className="p-4 border-b border-outline-variant/50">Martes</th>
+                <th className="p-4 border-b border-outline-variant/50">Miércoles</th>
+                <th className="p-4 border-b border-outline-variant/50">Jueves</th>
+                <th className="p-4 border-b border-outline-variant/50">Viernes</th>
               </tr>
             </thead>
-            <tbody className="text-body-md text-on-surface-variant">
-              <tr className="hover:bg-surface-bright transition-colors border-b border-outline-variant">
-                <td className="p-4 font-label-bold text-primary">06:00 AM - 08:00 AM</td>
-                <td className="p-4">Preparación Física</td>
-                <td className="p-4">-</td>
-                <td className="p-4">Preparación Física</td>
-                <td className="p-4 text-secondary font-label-bold">Cancha Abierta</td>
-              </tr>
-              <tr className="hover:bg-surface-bright transition-colors border-b border-outline-variant">
-                <td className="p-4 font-label-bold text-primary">04:00 PM - 05:30 PM</td>
-                <td className="p-4 text-primary-container font-label-bold">Mini Vóley & Infantil (8-12)</td>
-                <td className="p-4 text-primary-container font-label-bold">Mini Vóley & Infantil (8-12)</td>
-                <td className="p-4 text-primary-container font-label-bold">Mini Vóley & Infantil (8-12)</td>
-                <td className="p-4">Competencias Locales</td>
-              </tr>
-              <tr className="hover:bg-surface-bright transition-colors border-b border-outline-variant">
-                <td className="p-4 font-label-bold text-primary">05:30 PM - 07:00 PM</td>
-                <td className="p-4 text-tertiary-container font-label-bold">Sub-14 y Sub-16</td>
-                <td className="p-4 text-tertiary-container font-label-bold">Sub-14 y Sub-16</td>
-                <td className="p-4 text-tertiary-container font-label-bold">Sub-14 y Sub-16</td>
-                <td className="p-4">Liga Nacional / Eventos</td>
-              </tr>
-              <tr className="hover:bg-surface-bright transition-colors">
-                <td className="p-4 font-label-bold text-primary">07:00 PM - 08:30 PM</td>
-                <td className="p-4 font-label-bold text-secondary-fixed">Sub-18 y Selección</td>
-                <td className="p-4 font-label-bold text-secondary-fixed">Sub-18 y Selección</td>
-                <td className="p-4 font-label-bold text-secondary-fixed">Sub-18 y Selección</td>
-                <td className="p-4">Preparación Competitiva</td>
-              </tr>
+            <tbody className="text-body-md text-on-surface-variant divide-y divide-outline-variant/30">
+              {HORARIOS_SEMANA.map((slot, i) => (
+                <tr key={i} className="hover:bg-surface-bright/40 transition-colors">
+                  <td className="p-4 font-label-bold text-primary whitespace-nowrap bg-surface-variant/10">{slot.hora}</td>
+                  {renderCell(slot.Lunes)}
+                  {renderCell(slot.Martes)}
+                  {renderCell(slot.Miércoles)}
+                  {renderCell(slot.Jueves)}
+                  {renderCell(slot.Viernes)}
+                </tr>
+              ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Schedule Sábado */}
+        <div className="mt-4">
+          <h3 className="font-headline-md text-headline-md text-secondary mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined">weekend</span>
+            Horarios de Sábado
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {HORARIOS_SABADO.map((slot, i) => {
+              const grupo = GRUPOS[slot.grupo];
+              return (
+                <div key={i} className={`p-5 rounded-2xl border-l-4 ${grupo.estilo.replace('border-', 'border-l-')} flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow bg-white/50 backdrop-blur-sm`}>
+                  <div className="font-bold text-lg">{slot.hora}</div>
+                  <div>
+                    <div className="font-bold text-sm text-gray-800">{grupo.nombre}</div>
+                    <div className="text-xs opacity-80">{grupo.profesor}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { derivarEstadoMeses, startYear } from '../../utils/pagos';
 import { supabase } from '../../lib/supabase';
+import { LISTA_GRUPOS } from '../../data/horariosData';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -763,13 +764,11 @@ function AsignacionTab({ member, onUpdateMember }) {
 
   useEffect(() => {
     async function loadCatalogos() {
-      const [{ data: ents }, { data: hors }] = await Promise.all([
-        supabase.from('entrenadores').select('*').order('id'),
-        supabase.from('horarios').select('*').order('id')
-      ]);
+      const { data: ents } = await supabase.from('entrenadores').select('*').order('id');
+      
       setCatalogos({
         entrenadores: (ents || []).map(e => e.nombre),
-        horarios: (hors || []).map(h => h.descripcion)
+        horarios: LISTA_GRUPOS
       });
     }
     loadCatalogos();

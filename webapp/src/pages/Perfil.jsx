@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { derivarEstadoMeses, startYear } from '../utils/pagos';
 import { compressImage } from '../utils/imageCompression';
 import EditFichaModal from '../components/perfil/EditFichaModal';
-import { obtenerHorarioPorGrupo, GRUPOS } from '../data/horariosData';
+import { obtenerHorarioPorGrupo, GRUPOS, encontrarGrupo } from '../data/horariosData';
 
 // ── Config de estilos por estado de mes ───────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -845,47 +845,56 @@ export default function Perfil() {
                 </Link>
               </div>
 
-              {miembroData?.grupo_horario && GRUPOS[miembroData.grupo_horario] ? (
-                <div className={`rounded-xl p-5 border-l-4 mt-4 ${GRUPOS[miembroData.grupo_horario].estilo.replace('border-', 'border-l-')} bg-white/50 border`}>
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Grupo Asignado</span>
-                      <h3 className="text-lg font-bold mt-1">{miembroData.grupo_horario}</h3>
-                      <p className="text-xs opacity-90 mt-0.5">{GRUPOS[miembroData.grupo_horario].profesor}</p>
-                    </div>
-                    <span className="px-2 py-1 bg-white/80 rounded-md text-[10px] font-bold border">
-                      Oficial
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {obtenerHorarioPorGrupo(miembroData.grupo_horario).map((slot, idx) => (
-                      <div key={idx} className="bg-white/80 rounded-lg p-3 border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
-                        <span className="text-xs font-bold text-gray-500 uppercase">{slot.dia}</span>
-                        <span className="text-sm font-bold text-gray-800 mt-0.5">{slot.hora}</span>
+              {(() => {
+                const grupoInfo = encontrarGrupo(miembroData?.grupo_horario);
+                if (miembroData?.grupo_horario && grupoInfo) {
+                  return (
+                    <div className={`rounded-xl p-5 border-l-4 mt-4 ${grupoInfo.estilo.replace('border-', 'border-l-')} bg-white/50 border`}>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Grupo Asignado</span>
+                          <h3 className="text-lg font-bold mt-1">{grupoInfo.nombre}</h3>
+                          <p className="text-xs opacity-90 mt-0.5">{grupoInfo.profesor}</p>
+                        </div>
+                        <span className="px-2 py-1 bg-white/80 rounded-md text-[10px] font-bold border">
+                          Oficial
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ) : miembroData?.grupo_horario ? (
-                <div className="bg-orange-50/60 border border-orange-200/60 rounded-xl p-5 border-l-4 border-l-orange-500 mt-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Horario Asignado</span>
-                      <h3 className="text-base font-bold text-[#000613] mt-1">{miembroData.grupo_horario}</h3>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {obtenerHorarioPorGrupo(miembroData.grupo_horario).map((slot, idx) => (
+                          <div key={idx} className="bg-white/80 rounded-lg p-3 border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
+                            <span className="text-xs font-bold text-gray-500 uppercase">{slot.dia}</span>
+                            <span className="text-sm font-bold text-gray-800 mt-0.5">{slot.hora}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <span className="px-2 py-1 bg-white rounded-md text-xs font-bold text-gray-700 border border-gray-200">
-                      Entrenamiento Formativo
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center mt-4">
-                  <span className="material-symbols-outlined text-gray-400 text-3xl mb-2">pending_actions</span>
-                  <p className="text-sm font-semibold text-gray-600">Horario pendiente de asignación</p>
-                  <p className="text-xs text-gray-500 mt-1">El club te asignará un grupo y horario muy pronto.</p>
-                </div>
-              )}
+                  );
+                } else if (miembroData?.grupo_horario) {
+                  return (
+                    <div className="bg-orange-50/60 border border-orange-200/60 rounded-xl p-5 border-l-4 border-l-orange-500 mt-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Horario Asignado</span>
+                          <h3 className="text-base font-bold text-[#000613] mt-1">{miembroData.grupo_horario}</h3>
+                        </div>
+                        <span className="px-2 py-1 bg-white rounded-md text-xs font-bold text-gray-700 border border-gray-200">
+                          Entrenamiento Formativo
+                        </span>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center mt-4">
+                      <span className="material-symbols-outlined text-gray-400 text-3xl mb-2">pending_actions</span>
+                      <p className="text-sm font-semibold text-gray-600">Horario pendiente de asignación</p>
+                      <p className="text-xs text-gray-500 mt-1">El club te asignará un grupo y horario muy pronto.</p>
+                    </div>
+                  );
+                }
+              })()}
             </section>
 
           </div>

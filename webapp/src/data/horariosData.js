@@ -121,13 +121,39 @@ export const HORARIOS_SABADO = [
 // Array plano de todos los grupos para los selects
 export const LISTA_GRUPOS = Object.keys(GRUPOS);
 
+// Entrenadores del club basados en el cronograma oficial
+export const ENTRENADORES_PREDETERMINADOS = [
+  'Prof. Pito Perez',
+  'Prof. Kevin Culcay',
+  'Prof. Collen Cuninhan',
+  'Prof. Marcos Pérez'
+];
+
+export const HORARIOS_PREDETERMINADOS = [...LISTA_GRUPOS];
+
+/**
+ * Busca la información de un grupo con tolerancia a mayúsculas/minúsculas y coincidencias parciales
+ * @param {string} grupo
+ * @returns {object|null}
+ */
+export function encontrarGrupo(grupo) {
+  if (!grupo) return null;
+  const normalizado = grupo.trim().toUpperCase();
+  if (GRUPOS[normalizado]) return GRUPOS[normalizado];
+  const clave = Object.keys(GRUPOS).find(k => k === normalizado || normalizado.includes(k) || k.includes(normalizado));
+  return clave ? GRUPOS[clave] : null;
+}
+
 /**
  * Función auxiliar para obtener el horario de un deportista según su grupo
  * @param {string} grupo 
  * @returns {Array} Array de objetos { dia, hora }
  */
 export function obtenerHorarioPorGrupo(grupo) {
-  if (!grupo || !GRUPOS[grupo]) return [];
+  if (!grupo) return [];
+  const normalizado = grupo.trim().toUpperCase();
+  const grupoKey = Object.keys(GRUPOS).find(k => k === normalizado || normalizado.includes(k) || k.includes(normalizado));
+  if (!grupoKey) return [];
 
   const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
   const horario = [];
@@ -135,7 +161,7 @@ export function obtenerHorarioPorGrupo(grupo) {
   // Buscar en semana
   HORARIOS_SEMANA.forEach(slot => {
     dias.forEach(dia => {
-      if (slot[dia] === grupo) {
+      if (slot[dia] === grupoKey) {
         horario.push({ dia, hora: slot.hora });
       }
     });
@@ -143,7 +169,7 @@ export function obtenerHorarioPorGrupo(grupo) {
 
   // Buscar en sábado
   HORARIOS_SABADO.forEach(slot => {
-    if (slot.grupo === grupo) {
+    if (slot.grupo === grupoKey) {
       horario.push({ dia: 'Sábado', hora: slot.hora });
     }
   });

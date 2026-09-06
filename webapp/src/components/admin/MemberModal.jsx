@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { derivarEstadoMeses, startYear } from '../../utils/pagos';
 import { supabase } from '../../lib/supabase';
-import { LISTA_GRUPOS } from '../../data/horariosData';
+import { LISTA_GRUPOS, ENTRENADORES_PREDETERMINADOS, GRUPOS } from '../../data/horariosData';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -764,11 +764,20 @@ function AsignacionTab({ member, onUpdateMember }) {
 
   useEffect(() => {
     async function loadCatalogos() {
-      const { data: ents } = await supabase.from('entrenadores').select('*').order('id');
+      const [{ data: ents }, { data: hors }] = await Promise.all([
+        supabase.from('entrenadores').select('*').order('id'),
+        supabase.from('horarios').select('*').order('id')
+      ]);
       
+      const dbEnts = (ents || []).map(e => e.nombre).filter(Boolean);
+      const listaEntrenadores = Array.from(new Set([...ENTRENADORES_PREDETERMINADOS, ...dbEnts]));
+
+      const dbHors = (hors || []).map(h => h.descripcion).filter(Boolean);
+      const listaHorarios = Array.from(new Set([...LISTA_GRUPOS, ...dbHors]));
+
       setCatalogos({
-        entrenadores: (ents || []).map(e => e.nombre),
-        horarios: LISTA_GRUPOS
+        entrenadores: listaEntrenadores,
+        horarios: listaHorarios
       });
     }
     loadCatalogos();
@@ -848,7 +857,17 @@ function AsignacionTab({ member, onUpdateMember }) {
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Grupo y Horario</label>
               <select
                 value={data.grupo_horario}
-                onChange={(e) => setData({...data, grupo_horario: e.target.value})}
+                onChange={(e) => {
+                  const nuevoGrupo = e.target.value;
+                  const coachSugerido = GRUPOS[nuevoGrupo]?.profesor;
+                  setData(prev => ({
+                    ...prev,
+                    grupo_horario: nuevoGrupo,
+                    entrenador_asignado: (!prev.entrenador_asignado || prev.entrenador_asignado === '') && coachSugerido && coachSugerido !== 'Por confirmar'
+                      ? coachSugerido
+                      : prev.entrenador_asignado
+                  }));
+                }}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 bg-white transition-all shadow-sm"
               >
                 <option value="">— Seleccionar Horario —</option>

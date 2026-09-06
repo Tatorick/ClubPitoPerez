@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import { ENTRENADORES_PREDETERMINADOS, HORARIOS_PREDETERMINADOS } from '../../data/horariosData';
 
 // ── Componente de campo de formulario reutilizable ────────────────────────────
 function ConfigField({ label, hint, error, children }) {
@@ -54,6 +55,7 @@ export default function ConfigView() {
 
   const [entrenadores, setEntrenadores] = useState([]);
   const [horarios, setHorarios] = useState([]);
+  const [syncingCronograma, setSyncingCronograma] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState({});
   const [showApiKey, setShowApiKey] = useState(false);
@@ -91,12 +93,77 @@ export default function ConfigView() {
         supabase.from('entrenadores').select('*').order('id'),
         supabase.from('horarios').select('*').order('id')
       ]);
-      if (ents) setEntrenadores(ents);
-      if (hors) setHorarios(hors);
+
+      let entsFinal = ents;
+      if (!entsFinal || entsFinal.length === 0) {
+        try {
+          const toInsert = ENTRENADORES_PREDETERMINADOS.map(nombre => ({ nombre }));
+          const { data: seeded } = await supabase.from('entrenadores').insert(toInsert).select();
+          entsFinal = seeded && seeded.length > 0 ? seeded : toInsert.map((e, idx) => ({ id: idx + 1, nombre: e.nombre }));
+        } catch {
+          entsFinal = ENTRENADORES_PREDETERMINADOS.map((nombre, idx) => ({ id: idx + 1, nombre }));
+        }
+      }
+      setEntrenadores(entsFinal || []);
+
+      let horsFinal = hors;
+      if (!horsFinal || horsFinal.length === 0) {
+        try {
+          const toInsert = HORARIOS_PREDETERMINADOS.map(descripcion => ({ descripcion }));
+          const { data: seeded } = await supabase.from('horarios').insert(toInsert).select();
+          horsFinal = seeded && seeded.length > 0 ? seeded : toInsert.map((h, idx) => ({ id: idx + 1, descripcion: h.descripcion }));
+        } catch {
+          horsFinal = HORARIOS_PREDETERMINADOS.map((descripcion, idx) => ({ id: idx + 1, descripcion }));
+        }
+      }
+      setHorarios(horsFinal || []);
       setLoading(false);
     };
     fetchConfig();
   }, []);
+
+  const handleSincronizarCronograma = async () => {
+    setSyncingCronograma(true);
+    try {
+      // 1. Sincronizar Entrenadores
+      const existentesEnts = new Set(entrenadores.map(e => e.nombre?.toLowerCase().trim()));
+      const faltantesEnts = ENTRENADORES_PREDETERMINADOS.filter(nombre => !existentesEnts.has(nombre.toLowerCase().trim()));
+      
+      let nuevosEntsData = [...entrenadores];
+      if (faltantesEnts.length > 0) {
+        const { data: inserted } = await supabase.from('entrenadores').insert(faltantesEnts.map(nombre => ({ nombre }))).select();
+        if (inserted && inserted.length > 0) {
+          nuevosEntsData = [...nuevosEntsData, ...inserted];
+        } else {
+          nuevosEntsData = [...nuevosEntsData, ...faltantesEnts.map((n, i) => ({ id: Date.now() + i, nombre: n }))];
+        }
+      }
+      setEntrenadores(nuevosEntsData);
+
+      // 2. Sincronizar Horarios
+      const existentesHors = new Set(horarios.map(h => h.descripcion?.toLowerCase().trim()));
+      const faltantesHors = HORARIOS_PREDETERMINADOS.filter(desc => !existentesHors.has(desc.toLowerCase().trim()));
+
+      let nuevosHorsData = [...horarios];
+      if (faltantesHors.length > 0) {
+        const { data: inserted } = await supabase.from('horarios').insert(faltantesHors.map(descripcion => ({ descripcion }))).select();
+        if (inserted && inserted.length > 0) {
+          nuevosHorsData = [...nuevosHorsData, ...inserted];
+        } else {
+          nuevosHorsData = [...nuevosHorsData, ...faltantesHors.map((d, i) => ({ id: Date.now() + i, descripcion: d }))];
+        }
+      }
+      setHorarios(nuevosHorsData);
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err) {
+      console.error('Error sincronizando cronograma:', err);
+      alert('Error al sincronizar cronograma: ' + err.message);
+    } finally {
+      setSyncingCronograma(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -552,12 +619,29 @@ export default function ConfigView() {
         {/* ── TAB: DEPORTIVO ── */}
         {activeTab === 'deportivo' && (
           <div className="p-6 space-y-6">
-            <div>
-              <h3 className="font-bold text-gray-800 mb-1">Catálogo de Entrenadores y Horarios</h3>
-              <p className="text-xs text-gray-500">
-                Administra las opciones disponibles al asignar un entrenador o grupo a un deportista.
-                Al guardar, estos cambios se reflejan automáticamente en todos los perfiles.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-orange-50/70 to-blue-50/70 p-4 rounded-xl border border-orange-200/60">
+              <div>
+                <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                  <span className="material-symbols-outlined text-orange-500 text-[20px]">sports_volleyball</span>
+                  Catálogo Oficial del Cronograma Deportivo
+                </h3>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Gestiona los profesores y grupos de entrenamiento que se asignan a las deportistas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSincronizarCronograma}
+                disabled={syncingCronograma}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-700 text-xs font-bold transition-all shadow-sm shrink-0 disabled:opacity-60"
+              >
+                {syncingCronograma ? (
+                  <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[16px] text-orange-500">sync</span>
+                )}
+                Sincronizar Cronograma Oficial
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

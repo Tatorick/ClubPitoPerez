@@ -8,6 +8,14 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
 // ── Helpers ────────────────────────────────────────────────────────
+function getShortRepName(fullName) {
+  if (!fullName) return 'Sin representante';
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length > 3) return `${parts[0]} ${parts[2]}`;
+  if (parts.length > 1) return `${parts[0]} ${parts[1]}`;
+  return parts[0];
+}
+
 function getPaymentStatus(transacciones) {
   const meses = derivarEstadoMeses(transacciones);
   const vencidos  = meses.filter(p => p.estado === 'vencido').length;
@@ -94,7 +102,7 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
           ) : filtered.map(member => {
             const status = getPaymentStatus(member.transacciones);
             const isMadre = member.representante_legal === 'Madre';
-            const repNombres = isMadre ? member.madre_nombres : member.padre_nombres;
+            const repNombres = getShortRepName(isMadre ? member.madre_nombres : member.padre_nombres);
             const repTelefono = isMadre ? member.madre_telefono : member.padre_telefono;
             return (
               <div key={member.id} className="p-4 flex items-start gap-3">
@@ -119,7 +127,7 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
                     )}
                     <PaymentStrip transacciones={member.transacciones} />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{repNombres?.split(' ').slice(0, 2).join(' ') || 'Sin representante'} · {repTelefono || ''}</p>
+                  <p className="text-xs text-gray-500 mt-1">{repNombres} · {repTelefono || ''}</p>
                 </div>
                 <button
                   onClick={() => onOpenMember(member)}
@@ -156,7 +164,7 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
               ) : filtered.map(member => {
                 const status = getPaymentStatus(member.transacciones);
                 const isMadre = member.representante_legal === 'Madre';
-                const repNombres = isMadre ? member.madre_nombres : member.padre_nombres;
+                const repNombres = getShortRepName(isMadre ? member.madre_nombres : member.padre_nombres);
                 const repTelefono = isMadre ? member.madre_telefono : member.padre_telefono;
                 return (
                   <tr key={member.id} className="hover:bg-gray-50 transition-colors">

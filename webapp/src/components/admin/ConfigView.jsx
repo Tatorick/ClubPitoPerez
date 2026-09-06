@@ -83,8 +83,8 @@ export default function ConfigView() {
           cod_establecimiento:        data.cod_establecimiento || '001',
           cod_punto_emision:          data.cod_punto_emision || '001',
           tarifa_iva:                 data.tarifa_iva || '0',
-          entrenadores_lista:         data.entrenadores_lista || [],
-          horarios_lista:             data.horarios_lista || [],
+          entrenadores_lista:         (data.entrenadores_lista && data.entrenadores_lista.length > 0) ? data.entrenadores_lista : ['Kevin Culcay', 'Marcos Perez'],
+          horarios_lista:             (data.horarios_lista && data.horarios_lista.length > 0) ? data.horarios_lista : ['Femenino 19:00 a 20:30', 'Masculino 20:30 a 22:00'],
         }));
       }
       setLoading(false);
@@ -126,24 +126,24 @@ export default function ConfigView() {
     setSaveError('');
     setSaveSuccess(false);
     const { error } = await supabase.from('config_club').update({
-      razon_social:               form.razon_social.trim(),
-      ruc:                        form.ruc.trim(),
-      nombre_comercial:           form.nombre_comercial.trim() || form.razon_social.trim(),
-      direccion_matriz:           form.direccion_matriz.trim(),
-      contribuyente_especial:     form.contribuyente_especial.trim(),
-      obligado_contabilidad:      form.obligado_contabilidad,
-      telefono:                   form.telefono.trim(),
-      email_club:                 form.email_club.trim(),
+      razon_social:               form.razon_social?.trim() || 'Club',
+      ruc:                        form.ruc?.trim() || '9999999999999',
+      nombre_comercial:           form.nombre_comercial?.trim() || form.razon_social?.trim() || 'Club',
+      direccion_matriz:           form.direccion_matriz?.trim() || 'Cuenca, Ecuador',
+      contribuyente_especial:     form.contribuyente_especial?.trim() || '',
+      obligado_contabilidad:      form.obligado_contabilidad || 'NO',
+      telefono:                   form.telefono?.trim() || '',
+      email_club:                 form.email_club?.trim() || '',
       logo_url:                   form.logo_url || null,
-      autorizadorec_api_key:      form.autorizadorec_api_key.trim() || null,
-      autorizadorec_ambiente:     form.autorizadorec_ambiente,
-      autorizadorec_webhook_secret: form.autorizadorec_webhook_secret.trim() || null,
-      autorizadorec_base_url:     form.autorizadorec_base_url,
-      cod_establecimiento:        form.cod_establecimiento.trim(),
-      cod_punto_emision:          form.cod_punto_emision.trim(),
-      tarifa_iva:                 form.tarifa_iva,
-      entrenadores_lista:         form.entrenadores_lista,
-      horarios_lista:             form.horarios_lista,
+      autorizadorec_api_key:      form.autorizadorec_api_key?.trim() || null,
+      autorizadorec_ambiente:     form.autorizadorec_ambiente || 'pruebas',
+      autorizadorec_webhook_secret: form.autorizadorec_webhook_secret?.trim() || null,
+      autorizadorec_base_url:     form.autorizadorec_base_url || 'https://sandbox.autorizadorec.com',
+      cod_establecimiento:        form.cod_establecimiento?.trim() || '001',
+      cod_punto_emision:          form.cod_punto_emision?.trim() || '001',
+      tarifa_iva:                 form.tarifa_iva || '0',
+      entrenadores_lista:         form.entrenadores_lista || [],
+      horarios_lista:             form.horarios_lista || [],
     }).eq('singleton', true);
     setSaving(false);
     if (error) {

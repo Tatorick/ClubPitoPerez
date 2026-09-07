@@ -190,7 +190,6 @@ function MiembrosView({ onOpenMember, miembros, loading, precioPension }) {
                         <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">{member.categoria}</span>
                         {Number(member.descuento_porcentaje) > 0 && (
                           <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-800 rounded-full border border-green-300 flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-[11px] text-green-600">discount</span>
                             {member.descuento_porcentaje}% DESC.
                           </span>
                         )}

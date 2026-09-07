@@ -38,8 +38,8 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose, onAprobar, onRechazar 
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
@@ -265,8 +265,8 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose, miembro }) {
   const estadoStyles = { vencido: 'border-red-300 bg-red-50 text-red-700', pendiente: 'border-amber-300 bg-amber-50 text-amber-700', futuro: 'border-gray-200 bg-gray-50 text-gray-500' };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-xl w-full flex flex-col overflow-hidden max-h-[90vh]" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-[#001f3f]">
           <h3 className="font-bold text-white">Registrar Pago</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
@@ -425,7 +425,7 @@ function PagosTab({ member, onUpdateMember }) {
   const pagados    = mesesStatus.filter(m => ['pagado','adelanto'].includes(m.estado)).length;
   const vencidos   = mesesStatus.filter(m => m.estado === 'vencido').length;
   const enVerificacion = mesesStatus.filter(m => m.estado === 'en_verificacion').length;
-  const totalPagado = (member.transacciones || []).reduce((s, t) => s + Number(t.monto_real || 0), 0);
+  const totalPagado = (member.transacciones || []).filter(t => t.estado === 'aprobado' || !t.estado).reduce((s, t) => s + Number(t.monto_real || 0), 0);
   const montoVencido = mesesStatus.filter(m => m.estado === 'vencido').reduce((s, m) => s + m.montoPension, 0);
 
   const handleSavePago = async (nuevaTxn) => {
@@ -914,6 +914,7 @@ function AsignacionTab({ member, onUpdateMember }) {
 
 // ─── Tab Ficha ────────────────────────────────────────────────────────────────
 function FichaTab({ member, onUpdateMember }) {
+  const { precioPension } = useClubConfig();
   // ─── Edición ficha ────────────────────────────────────────────────────────
   const [isEditingFicha, setIsEditingFicha] = useState(false);
   const [fichaForm, setFichaForm] = useState({ ...member });
@@ -1091,6 +1092,7 @@ function FichaTab({ member, onUpdateMember }) {
             </Section>
             <Section title="Datos Financieros" icon="payments">
               <Field label="Descuento Pensión (%)" value={`${member.descuento_porcentaje || 0}%`} />
+              <Field label="Pensión Mensual a Pagar" value={`$${((precioPension || 55.00) * (1 - (Number(member.descuento_porcentaje) || 0) / 100)).toFixed(2)}`} />
             </Section>
             <Section title="Ficha Médica" icon="medical_information">
               <Field label="Discapacidad" value={member.discapacidad} />
@@ -1218,8 +1220,7 @@ export default function MemberModal({ member: initialMember, onClose, onDelete }
       `}</style>
 
       <div id="member-modal-root"
-        className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-        onClick={onClose}>
+        className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden"
           onClick={e => e.stopPropagation()}>
 

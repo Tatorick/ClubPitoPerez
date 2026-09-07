@@ -6,6 +6,7 @@ import ConfigView from '../components/admin/ConfigView';
 import { derivarEstadoMeses, startYear } from '../utils/pagos';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useClubConfig } from '../hooks/useClubConfig';
 
 // ── Helpers ────────────────────────────────────────────────────────
 function getShortRepName(fullName) {
@@ -46,7 +47,7 @@ function PaymentStrip({ transacciones }) {
 }
 
 // ── Vista: Miembros ────────────────────────────────────────────────
-function MiembrosView({ onOpenMember, miembros, loading }) {
+function MiembrosView({ onOpenMember, miembros, loading, precioPension }) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -120,9 +121,14 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
                   <p className="text-xs text-gray-400 mb-1">C.I. {member.cedula}</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">{member.categoria}</span>
-                    {(member.tiene_beca === true || (member.monto_pension && Number(member.monto_pension) < 55)) && (
+                    {Number(member.descuento_porcentaje) > 0 && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-800 rounded-full border border-green-300">
+                        ⭐ {member.descuento_porcentaje}% DESC.
+                      </span>
+                    )}
+                    {(member.tiene_beca === true || (member.monto_pension && Number(member.monto_pension) < 55) && Number(member.descuento_porcentaje) === 0) && (
                       <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-300">
-                        ⭐ Beca ${Number(member.monto_pension || 25).toFixed(0)}
+                        ⭐ Beca
                       </span>
                     )}
                     <PaymentStrip transacciones={member.transacciones} />
@@ -182,10 +188,16 @@ function MiembrosView({ onOpenMember, miembros, loading }) {
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-1 items-start">
                         <span className="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">{member.categoria}</span>
-                        {(member.tiene_beca === true || (member.monto_pension && Number(member.monto_pension) < 55)) && (
+                        {Number(member.descuento_porcentaje) > 0 && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-800 rounded-full border border-green-300 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[11px] text-green-600">discount</span>
+                            {member.descuento_porcentaje}% DESC.
+                          </span>
+                        )}
+                        {(member.tiene_beca === true || (member.monto_pension && Number(member.monto_pension) < 55) && Number(member.descuento_porcentaje) === 0) && (
                           <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-300 flex items-center gap-0.5">
                             <span className="material-symbols-outlined text-[11px] text-amber-600">star</span>
-                            Beca ${Number(member.monto_pension || 25).toFixed(0)}
+                            Beca
                           </span>
                         )}
                       </div>
@@ -289,6 +301,7 @@ export default function Admin() {
   const [showNewMemberModal, setShowNewMemberModal] = useState(false);
   const [miembros, setMiembros] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { precioPension } = useClubConfig();
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -412,7 +425,7 @@ export default function Admin() {
         {/* Content */}
         <div className="p-4 md:p-6">
           {activeTab === 'pagos'    && <PagosView />}
-          {activeTab === 'miembros' && <MiembrosView onOpenMember={setSelectedMember} miembros={miembros} loading={loading} />}
+          {activeTab === 'miembros' && <MiembrosView onOpenMember={setSelectedMember} miembros={miembros} loading={loading} precioPension={precioPension} />}
           {activeTab === 'config'   && <ConfigView />}
         </div>
       </main>

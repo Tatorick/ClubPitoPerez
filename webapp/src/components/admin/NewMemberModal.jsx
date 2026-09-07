@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useClubConfig } from '../../hooks/useClubConfig';
 
 export default function NewMemberModal({ onClose, onMemberAdded }) {
+  const { config } = useClubConfig();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const fileRef = useRef(null);
@@ -17,6 +19,7 @@ export default function NewMemberModal({ onClose, onMemberAdded }) {
     categoria: 'U12',
     tiene_beca: false,
     tipo_beca: '',
+    descuento_porcentaje: 0,
     monto_pension: 55,
     
     tiene_discapacidad: false,
@@ -231,7 +234,7 @@ export default function NewMemberModal({ onClose, onMemberAdded }) {
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-amber-900 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[15px] text-amber-600">star</span>
-                      ¿Tiene Beca / Descuento?
+                      ¿Tiene Beca o Descuento?
                     </label>
                     <select
                       name="tiene_beca"
@@ -241,24 +244,24 @@ export default function NewMemberModal({ onClose, onMemberAdded }) {
                         setFormData(prev => ({
                           ...prev,
                           tiene_beca: hasBeca,
-                          monto_pension: hasBeca ? 25 : 55,
-                          tipo_beca: hasBeca ? 'Beca Deportiva' : ''
+                          descuento_porcentaje: hasBeca ? 50 : 0,
+                          tipo_beca: hasBeca ? 'Beca / Descuento Aplicado' : ''
                         }));
                       }}
                       className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                     >
-                      <option value="NO">No (Pensión Regular $55)</option>
-                      <option value="SI">Sí (Becado/a)</option>
+                      <option value="NO">No (Pensión Regular)</option>
+                      <option value="SI">Sí (Descuento/Beca)</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-amber-900">Monto Mensual Asignado ($ USD)</label>
+                    <label className="text-xs font-bold text-amber-900">Porcentaje de Descuento (%)</label>
                     <input
                       type="number"
-                      name="monto_pension"
-                      step="0.01"
+                      name="descuento_porcentaje"
                       min="0"
-                      value={formData.monto_pension}
+                      max="100"
+                      value={formData.descuento_porcentaje || ''}
                       onChange={handleChange}
                       className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white font-bold text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                     />

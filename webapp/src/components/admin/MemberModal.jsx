@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { derivarEstadoMeses, startYear } from '../../utils/pagos';
 import { supabase } from '../../lib/supabase';
 import { LISTA_GRUPOS, ENTRENADORES_PREDETERMINADOS, GRUPOS } from '../../data/horariosData';
+import { useClubConfig } from '../../hooks/useClubConfig';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -408,14 +409,19 @@ function RegisterPaymentForm({ mesesStatus, onSave, onClose, miembro }) {
 
 // ─── Tab de Pagos ─────────────────────────────────────────────────────────────
 function PagosTab({ member, onUpdateMember }) {
+  const { precioPension } = useClubConfig();
   const [receiptOpen, setReceiptOpen] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
 
-  const montoPension = Number(member.monto_pension ?? 55.00);
-  const tieneBeca = member.tiene_beca === true || (montoPension < 55.00);
-  const tipoBeca = member.tipo_beca || (tieneBeca ? 'Beca Deportiva' : null);
+  const descuentoPorcentaje = Number(member.descuento_porcentaje || 0);
+  let montoPension = (precioPension || 55.00) * (1 - descuentoPorcentaje / 100);
+  if (descuentoPorcentaje === 0 && member.monto_pension && Number(member.monto_pension) < (precioPension || 55.00)) {
+    montoPension = Number(member.monto_pension);
+  }
+  const tieneBeca = member.tiene_beca === true || (montoPension < (precioPension || 55.00));
+  const tipoBeca = member.tipo_beca || (tieneBeca ? 'Beca / Descuento Aplicado' : null);
 
-  const mesesStatus = derivarEstadoMeses(member.transacciones, montoPension);
+  const mesesStatus = derivarEstadoMeses(member.transacciones, precioPension, descuentoPorcentaje, undefined, member.monto_pension);
   const pagados    = mesesStatus.filter(m => ['pagado','adelanto'].includes(m.estado)).length;
   const vencidos   = mesesStatus.filter(m => m.estado === 'vencido').length;
   const enVerificacion = mesesStatus.filter(m => m.estado === 'en_verificacion').length;
@@ -541,7 +547,7 @@ function PagosTab({ member, onUpdateMember }) {
             <span className="material-symbols-outlined text-amber-600">star</span>
             <div>
               <p className="text-xs font-bold text-amber-900">{tipoBeca || 'Deportista con Beca'}</p>
-              <p className="text-[11px] text-amber-700">Pensión asignada: <strong>${montoPension.toFixed(2)}/mes</strong> (Pensión regular: $55.00)</p>
+              <p className="text-[11px] text-amber-700">Pensión asignada: <strong>${montoPension.toFixed(2)}/mes</strong> (Pensión regular: ${precioPension.toFixed(2)})</p>
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/80 text-amber-900">
@@ -950,6 +956,7 @@ function FichaTab({ member, onUpdateMember }) {
           facturacion_direccion: fichaForm.facturacion_direccion,
           facturacion_telefono: fichaForm.facturacion_telefono,
           facturacion_correo:   fichaForm.facturacion_correo,
+          descuento_porcentaje: fichaForm.descuento_porcentaje,
         })
         .eq('id', member.id)
         .select()
@@ -1031,6 +1038,10 @@ function FichaTab({ member, onUpdateMember }) {
               <EditField label="Categoría" name="categoria" value={fichaForm.categoria || ''} onChange={handleFichaChange} as="select" options={['Mini','Pre-Mini','Infantil','Juvenil','Mayores']} />
               <EditField label="Dirección" name="direccion" value={fichaForm.direccion || ''} onChange={handleFichaChange} full />
             </EditSection>
+            {/* Financiero */}
+            <EditSection title="Datos Financieros" icon="payments">
+              <EditField label="Descuento Pensión (%)" name="descuento_porcentaje" type="number" value={fichaForm.descuento_porcentaje || ''} onChange={handleFichaChange} />
+            </EditSection>
             {/* Médica */}
             <EditSection title="Ficha Médica" icon="medical_information">
               <EditField label="Discapacidad" name="discapacidad" value={fichaForm.discapacidad || ''} onChange={handleFichaChange} as="select" options={['NO','SÍ']} />
@@ -1077,6 +1088,9 @@ function FichaTab({ member, onUpdateMember }) {
               <Field label="Género" value={member.genero} />
               <Field label="Nacionalidad" value={member.nacionalidad} />
               <Field label="Dirección" value={member.direccion} full />
+            </Section>
+            <Section title="Datos Financieros" icon="payments">
+              <Field label="Descuento Pensión (%)" value={`${member.descuento_porcentaje || 0}%`} />
             </Section>
             <Section title="Ficha Médica" icon="medical_information">
               <Field label="Discapacidad" value={member.discapacidad} />

@@ -52,6 +52,7 @@ export default function ConfigView() {
     cod_establecimiento: '001',
     cod_punto_emision: '001',
     tarifa_iva: '0',
+    precio_pension: '55.00',
   });
 
   const [entrenadores, setEntrenadores] = useState([]);
@@ -88,6 +89,7 @@ export default function ConfigView() {
           cod_establecimiento:        data.cod_establecimiento || '001',
           cod_punto_emision:          data.cod_punto_emision || '001',
           tarifa_iva:                 data.tarifa_iva || '0',
+          precio_pension:             data.precio_pension || '55.00',
         }));
       }
 
@@ -224,6 +226,7 @@ export default function ConfigView() {
       cod_establecimiento:        form.cod_establecimiento?.trim() || '001',
       cod_punto_emision:          form.cod_punto_emision?.trim() || '001',
       tarifa_iva:                 form.tarifa_iva || '0',
+      precio_pension:             form.precio_pension || '55.00',
     };
 
     let error = null;
@@ -502,6 +505,14 @@ export default function ConfigView() {
                   </select>
                 </ConfigField>
               </div>
+
+              <div className="mt-4">
+                <ConfigField label="Precio Base de Pensión ($)" hint="Este es el valor predeterminado que se cobrará mensualmente a los deportistas sin descuento." error={fieldErrors.precio_pension}>
+                  <input type="number" step="0.01" name="precio_pension" value={form.precio_pension} onChange={handleChange}
+                         className={fieldErrors.precio_pension ? inputErrCls : inputCls} placeholder="Ej: 55.00" />
+                </ConfigField>
+              </div>
+
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">info</span>
                 <p>El número de serie de cada factura será: <strong>{form.cod_establecimiento}-{form.cod_punto_emision}-XXXXXXXXX</strong>. El secuencial lo asigna AutorizadorEC automáticamente.</p>

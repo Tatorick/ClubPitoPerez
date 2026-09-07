@@ -2,11 +2,17 @@
 
 // Definición de los grupos con sus respectivos profesores y colores elegantes (Tailwind classes)
 export const GRUPOS = {
-  'U15 DAMAS': {
-    nombre: 'U15 Damas',
+  'U15 DAMAS G1': {
+    nombre: 'U15 Damas G1',
     profesor: 'Prof. Pito Perez',
     anios: '2010 2011 2012 2013',
     estilo: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+  },
+  'U15 DAMAS G2': {
+    nombre: 'U15 Damas G2',
+    profesor: 'Prof. Pito Perez',
+    anios: '2010 2011 2012 2013',
+    estilo: 'bg-teal-50 text-teal-700 border-teal-200'
   },
   'MINI DAMAS': {
     nombre: 'Mini Damas',
@@ -62,11 +68,11 @@ export const GRUPOS = {
 export const HORARIOS_SEMANA = [
   {
     hora: '14:00 A 15:30',
-    Lunes: 'U15 DAMAS',
-    Martes: null,
-    Miércoles: 'U15 DAMAS',
-    Jueves: null,
-    Viernes: 'U15 DAMAS'
+    Lunes: 'U15 DAMAS G1',
+    Martes: 'U15 DAMAS G2',
+    Miércoles: 'U15 DAMAS G1',
+    Jueves: 'U15 DAMAS G2',
+    Viernes: 'U15 DAMAS G1'
   },
   {
     hora: '15:30 A 16:30',
@@ -112,7 +118,7 @@ export const HORARIOS_SEMANA = [
 
 // Horarios de Sábado
 export const HORARIOS_SABADO = [
-  { hora: '08:00 A 09:30', grupo: 'SUB 14 DAMAS' },
+  { hora: '08:00 A 09:30', grupo: 'U15 DAMAS G2' },
   { hora: '09:30 A 11:00', grupo: 'SUB 14 VARONES' },
   { hora: '11:00 A 12:30', grupo: 'SUB 12 DAMAS' },
   { hora: '12:30 A 14:00', grupo: 'SUB 16 DAMAS' }

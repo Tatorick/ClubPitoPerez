@@ -6,6 +6,7 @@ import { derivarEstadoMeses, startYear } from '../utils/pagos';
 import { compressImage } from '../utils/imageCompression';
 import EditFichaModal from '../components/perfil/EditFichaModal';
 import { obtenerHorarioPorGrupo, GRUPOS, encontrarGrupo } from '../data/horariosData';
+import { useClubConfig } from '../hooks/useClubConfig';
 
 // ── Config de estilos por estado de mes ───────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -436,6 +437,7 @@ export default function Perfil() {
   const [loading, setLoading] = useState(true);
   const [fichaData, setFichaData] = useState(null);
   const [miembroData, setMiembroData] = useState(null);
+  const { precioPension } = useClubConfig();
   const [transacciones, setTransacciones] = useState([]);
   
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -560,13 +562,15 @@ export default function Perfil() {
     }
   };
 
-  // Beca y Pensión personalizada — solo desde base de datos, nunca por nombre
-  const montoPension = Number(miembroData?.monto_pension ?? 55.00);
-  const tieneBeca = miembroData?.tiene_beca === true || (miembroData && montoPension < 55.00);
-  const tipoBeca = miembroData?.tipo_beca || (tieneBeca ? 'Beca Deportiva' : null);
+  const descuentoPorcentaje = Number(miembroData?.descuento_porcentaje || 0);
+  let montoPension = precioPension * (1 - descuentoPorcentaje / 100);
+  if (descuentoPorcentaje === 0 && miembroData && Number(miembroData.monto_pension) < precioPension) {
+    montoPension = Number(miembroData.monto_pension);
+  }
+  const tieneBeca = miembroData?.tiene_beca === true || (miembroData && Number(miembroData.monto_pension) < 55.00) || descuentoPorcentaje > 0;
+  const tipoBeca = miembroData?.tipo_beca || (tieneBeca ? 'Beca / Descuento Aplicado' : null);
 
-  // Derivación de meses usando transacciones reales y monto de pensión del deportista
-  const mesesStatus = derivarEstadoMeses(transacciones, montoPension);
+  const mesesStatus = derivarEstadoMeses(transacciones, precioPension, descuentoPorcentaje, undefined, miembroData?.monto_pension);
   const mesesPagadosCount = mesesStatus.filter(m => ['pagado', 'adelanto'].includes(m.estado)).length;
   const mesesPendientesCount = mesesStatus.filter(m => m.estado === 'pendiente' || m.estado === 'vencido').length;
   const mesesEnVerificacionCount = mesesStatus.filter(m => m.estado === 'en_verificacion').length;
@@ -717,7 +721,7 @@ export default function Perfil() {
                     <h2 className="text-xl font-bold text-[#000613]">Control de Mensualidades y Cuotas</h2>
                     {tieneBeca && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                        ⭐ Tarifa Beca: ${montoPension.toFixed(2)}/mes (Regular: $55)
+                        ⭐ Tarifa: ${montoPension.toFixed(2)}/mes (Regular: ${precioPension.toFixed(2)})
                       </span>
                     )}
                   </div>

@@ -9,7 +9,7 @@ export const DEMO_HOY = {
 };
 
 export const PENSION_ESTANDAR = 55.00;
-export const MATRICULA_ESTANDAR = 50.00;
+export const MATRICULA_ESTANDAR = 40.00;
 
 // El ciclo escolar empieza en Septiembre (mes 8).
 // Si estamos antes de Septiembre (mes < 8), el ciclo inició el año pasado.
@@ -35,12 +35,23 @@ export const MESES_BASE = [
  * Deriva el estado de los meses (pagado, pendiente, vencido, futuro)
  * tomando en cuenta el monto de pensión configurado para el deportista (ej: $55 estándar, $25 con beca)
  */
-export function derivarEstadoMeses(transacciones, montoPensionCustom, montoMatriculaCustom) {
+export function derivarEstadoMeses(transacciones, precioBasePension, descuentoPorcentaje, montoMatriculaCustom, legacyMontoPension) {
   const { anioMes: mesActualIdx, anio: anioActual } = DEMO_HOY;
 
-  const montoPension = montoPensionCustom !== undefined && montoPensionCustom !== null && !isNaN(Number(montoPensionCustom))
-    ? Number(montoPensionCustom)
+  const basePension = precioBasePension !== undefined && precioBasePension !== null && !isNaN(Number(precioBasePension))
+    ? Number(precioBasePension)
     : PENSION_ESTANDAR;
+
+  const descPorcentaje = descuentoPorcentaje !== undefined && descuentoPorcentaje !== null && !isNaN(Number(descuentoPorcentaje))
+    ? Number(descuentoPorcentaje)
+    : 0;
+
+  let montoPension = basePension;
+  if (descPorcentaje > 0) {
+    montoPension = basePension * (1 - descPorcentaje / 100);
+  } else if (legacyMontoPension !== undefined && legacyMontoPension !== null && !isNaN(Number(legacyMontoPension))) {
+    montoPension = Number(legacyMontoPension);
+  }
 
   const montoMatricula = montoMatriculaCustom !== undefined && montoMatriculaCustom !== null && !isNaN(Number(montoMatriculaCustom))
     ? Number(montoMatriculaCustom)

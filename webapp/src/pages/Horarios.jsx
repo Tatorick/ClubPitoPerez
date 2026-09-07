@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { GRUPOS, HORARIOS_SEMANA, HORARIOS_SABADO } from '../data/horariosData';
+import { useClubConfig } from '../hooks/useClubConfig';
 
 export default function Horarios() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('');
+  const { precioPension } = useClubConfig();
 
   const openModal = (planName) => {
     setSelectedPlan(planName);
@@ -104,14 +106,15 @@ export default function Horarios() {
       {/* Pricing Section */}
       <section className="flex flex-col gap-gutter" id="precios">
         <h2 className="font-headline-lg text-headline-lg text-primary border-b border-outline-variant pb-2 text-center md:text-left">Inversión en tu Futuro</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
           {/* Annual Registration */}
           <div className="bg-surface border border-outline-variant rounded-lg p-10 flex flex-col items-center text-center gap-4 shadow-[0_4px_4px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-transform duration-300">
             <span className="material-symbols-outlined text-secondary text-display-lg" style={{fontSize: '48px'}}>assignment_turned_in</span>
             <h3 className="font-headline-md text-headline-md text-primary">Matrícula Anual</h3>
+            <div className="font-headline-lg text-headline-lg text-primary">$40<span className="font-body-md text-body-md text-on-surface-variant">/año</span></div>
             <p className="font-body-md text-body-md text-on-surface-variant">Asegura tu lugar en el club y accede a todos nuestros beneficios exclusivos durante todo el año.</p>
             <div className="mt-auto">
-              <button className="font-label-bold text-label-bold bg-primary text-on-primary px-8 py-3 rounded hover:bg-primary-container transition-colors shadow-sm">Consultar Detalles</button>
+              <button className="font-label-bold text-label-bold bg-primary text-on-primary px-8 py-3 rounded hover:bg-primary-container transition-colors shadow-sm" onClick={() => openModal('Matrícula')}>Inscribirse Ahora</button>
             </div>
           </div>
           {/* Monthly Fee */}
@@ -119,10 +122,20 @@ export default function Horarios() {
             <div className="absolute top-0 right-0 bg-tertiary-container text-on-tertiary-container font-label-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Más Popular</div>
             <span className="material-symbols-outlined text-secondary text-display-lg" style={{fontSize: '48px'}}>calendar_month</span>
             <h3 className="font-headline-md text-headline-md text-primary">Mensualidad</h3>
-            <div className="font-headline-lg text-headline-lg text-primary">$55<span className="font-body-md text-body-md text-on-surface-variant">/mes</span></div>
+            <div className="font-headline-lg text-headline-lg text-primary">${precioPension}<span className="font-body-md text-body-md text-on-surface-variant">/mes</span></div>
             <p className="font-body-md text-body-md text-on-surface-variant">Entrenamiento continuo de alto rendimiento con nuestros entrenadores certificados.</p>
             <div className="mt-auto w-full">
               <button className="w-full font-label-bold text-label-bold bg-secondary-container text-on-secondary-container px-8 py-3 rounded hover:bg-secondary transition-colors shadow-sm" onClick={() => openModal('Mensualidad')}>Inscribirse Ahora</button>
+            </div>
+          </div>
+          {/* Seguro Médico */}
+          <div className="bg-surface border border-outline-variant rounded-lg p-10 flex flex-col items-center text-center gap-4 shadow-[0_4px_4px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-transform duration-300">
+            <span className="material-symbols-outlined text-secondary text-display-lg" style={{fontSize: '48px'}}>health_and_safety</span>
+            <h3 className="font-headline-md text-headline-md text-primary">Seguro Médico</h3>
+            <div className="font-headline-lg text-headline-lg text-primary">$15<span className="font-body-md text-body-md text-on-surface-variant">/año</span></div>
+            <p className="font-body-md text-body-md text-on-surface-variant">Cobertura médica anual opcional, protegiendo al deportista en todo momento.</p>
+            <div className="mt-auto">
+              <button className="font-label-bold text-label-bold bg-primary text-on-primary px-8 py-3 rounded hover:bg-primary-container transition-colors shadow-sm" onClick={() => openModal('Seguro Médico')}>Ver más</button>
             </div>
           </div>
         </div>
@@ -139,17 +152,34 @@ export default function Horarios() {
             <p className="font-body-md text-body-md text-on-surface-variant mb-6">
               Estás seleccionando el plan <span className="font-label-bold text-secondary">{selectedPlan}</span>.
             </p>
-            <form className="flex flex-col gap-4">
-              <div>
-                <label className="block font-label-bold text-label-bold text-on-surface mb-1">Nombre Completo</label>
-                <input className="w-full border border-outline-variant rounded p-2 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-surface-bright text-on-surface" type="text" />
+            {selectedPlan === 'Seguro Médico' ? (
+              <div className="flex flex-col gap-4">
+                <p className="font-body-md text-body-md text-on-surface-variant">
+                  El <strong>Seguro Médico</strong> es un beneficio opcional que tiene un costo de <strong>$15 anuales</strong>.
+                </p>
+                <ul className="list-disc pl-5 font-body-md text-body-md text-on-surface-variant space-y-2">
+                  <li>Cubre hasta <strong>$1500 USD</strong> en gastos médicos por accidentes durante los entrenamientos o competiciones oficiales.</li>
+                  <li>Atención en red de clínicas afiliadas de primer nivel.</li>
+                  <li>Asistencia médica inmediata.</li>
+                </ul>
+                <p className="font-body-md text-body-md text-on-surface-variant mt-2 text-sm">
+                  Acércate a la oficina principal del club para firmar la solicitud de afiliación.
+                </p>
+                <button className="w-full font-label-bold text-label-bold bg-secondary-container text-on-secondary-container px-4 py-3 rounded hover:bg-secondary transition-colors shadow-sm mt-4" type="button" onClick={closeModal}>Entendido</button>
               </div>
-              <div>
-                <label className="block font-label-bold text-label-bold text-on-surface mb-1">Correo Electrónico</label>
-                <input className="w-full border border-outline-variant rounded p-2 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-surface-bright text-on-surface" type="email" />
-              </div>
-              <button className="w-full font-label-bold text-label-bold bg-secondary-container text-on-secondary-container px-4 py-3 rounded hover:bg-secondary transition-colors shadow-sm mt-4" type="button">Proceder al Pago</button>
-            </form>
+            ) : (
+              <form className="flex flex-col gap-4">
+                <div>
+                  <label className="block font-label-bold text-label-bold text-on-surface mb-1">Nombre Completo</label>
+                  <input className="w-full border border-outline-variant rounded p-2 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-surface-bright text-on-surface" type="text" />
+                </div>
+                <div>
+                  <label className="block font-label-bold text-label-bold text-on-surface mb-1">Correo Electrónico</label>
+                  <input className="w-full border border-outline-variant rounded p-2 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-surface-bright text-on-surface" type="email" />
+                </div>
+                <button className="w-full font-label-bold text-label-bold bg-secondary-container text-on-secondary-container px-4 py-3 rounded hover:bg-secondary transition-colors shadow-sm mt-4" type="button">Proceder al Pago</button>
+              </form>
+            )}
           </div>
         </div>
       )}

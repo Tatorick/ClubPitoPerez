@@ -602,8 +602,8 @@ export default function Admin() {
       {/* ── Sidebar ── */}
       <nav className="hidden lg:flex flex-col h-screen w-64 bg-[#001f3f] shadow-xl fixed left-0 top-0 z-40">
         <div className="flex items-center gap-3 p-6 border-b border-white/10">
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
-            <img alt="Logo" className="w-full h-full object-cover"
+          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 p-1">
+            <img alt="Logo" className="w-full h-full object-contain"
               src="/logo_club.png" />
           </div>
           <div>

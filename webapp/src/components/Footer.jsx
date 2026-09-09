@@ -91,7 +91,7 @@ export default function Footer() {
                 <div className="absolute -inset-1 bg-secondary/30 rounded-full blur-sm group-hover:bg-secondary/50 transition-colors" />
                 <img
                   alt="Pito Pérez Voleibol Club Logo"
-                  className="relative h-14 w-auto object-contain"
+                  className="relative h-14 w-auto object-contain bg-white rounded-full p-1.5"
                   src="/logo_club.png"
                 />
               </div>

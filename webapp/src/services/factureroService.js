@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_FACTURERO_API_URL || 'http://apptest.factureromovil.com/api';
+import { supabase } from './../lib/supabase';
 
 /**
  * Servicio para interactuar con Facturero Móvil
@@ -6,25 +6,33 @@ const API_URL = import.meta.env.VITE_FACTURERO_API_URL || 'http://apptest.factur
 class FactureroService {
   constructor() {
     this.token = null;
+    this.config = null;
+  }
+
+  async loadConfig() {
+    const { data } = await supabase.from('config_club').select('*').maybeSingle();
+    this.config = data;
+    return data;
   }
 
   async login() {
-    const username = import.meta.env.VITE_FACTURERO_USER;
-    const password = import.meta.env.VITE_FACTURERO_PASSWORD;
+    if (!this.config) await this.loadConfig();
+    
+    const username = this.config?.facturero_user || import.meta.env.VITE_FACTURERO_USER;
+    const password = this.config?.facturero_password || import.meta.env.VITE_FACTURERO_PASSWORD;
+    const ambiente = this.config?.facturero_ambiente || 'pruebas';
+    const baseUrl = ambiente === 'produccion' 
+      ? 'https://app.factureromovil.com/api' 
+      : 'http://apptest.factureromovil.com/api';
 
     if (!username || !password) {
-      throw new Error('Faltan credenciales de Facturero Móvil en las variables de entorno');
+      throw new Error('Faltan credenciales de Facturero Móvil en la Configuración del Club');
     }
 
-    const response = await fetch(`${API_URL}/login_check`, {
+    const response = await fetch(`${baseUrl}/login_check`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        _username: username,
-        _password: password
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _username: username, _password: password })
     });
 
     if (!response.ok) {
@@ -37,11 +45,10 @@ class FactureroService {
   }
 
   async fetchWithAuth(endpoint, options = {}) {
-    if (!this.token) {
-      await this.login();
-    }
+    const ambiente = this.config?.facturero_ambiente || 'pruebas';
+    const baseUrl = ambiente === 'produccion' ? 'https://app.factureromovil.com/api' : 'http://apptest.factureromovil.com/api';
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -52,7 +59,7 @@ class FactureroService {
 
     if (response.status === 401) {
       await this.login();
-      return fetch(`${API_URL}${endpoint}`, {
+      return fetch(`${baseUrl}${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -91,8 +98,9 @@ class FactureroService {
   }
 
   async emitirFactura(clienteId, monto) {
+    if (!this.config) await this.loadConfig();
     const hoy = new Date().toISOString().split('T')[0];
-    const productoId = import.meta.env.VITE_FACTURERO_PRODUCTO_ID || "1868"; // Reemplazar con ID real
+    const productoId = this.config?.facturero_producto_id || import.meta.env.VITE_FACTURERO_PRODUCTO_ID || "1868";
     
     const payload = {
       fechaEmision: hoy,

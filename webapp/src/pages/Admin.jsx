@@ -604,7 +604,7 @@ export default function Admin() {
         <div className="flex items-center gap-3 p-6 border-b border-white/10">
           <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
             <img alt="Logo" className="w-full h-full object-cover"
-              src="/logo-club-transparent.png" />
+              src="/logo_club.png" />
           </div>
           <div>
             <p className="text-white font-bold text-sm leading-tight">Portal Admin</p>

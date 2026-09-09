@@ -50,7 +50,7 @@ export default function Login() {
             <img
               alt="Logo"
               className="h-16 w-auto"
-              src="/logo-club-transparent.png"
+              src="/logo_club.png"
             />
           </Link>
           <h1 className="font-headline-md text-headline-md text-primary text-center">Bienvenido de nuevo</h1>

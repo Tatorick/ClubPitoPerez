@@ -42,7 +42,7 @@ export default function Navbar() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            <img alt="Pito Pérez Voleibol Club Logo" className="h-12 md:h-16 w-auto object-contain" src="/logo-club-transparent.png" />
+            <img alt="Pito Pérez Voleibol Club Logo" className="h-12 md:h-16 w-auto object-contain" src="/logo_club.png" />
             <div className="hidden md:flex flex-col text-primary ml-2 leading-tight justify-center">
               <span className="font-caption text-[10px] text-secondary uppercase tracking-[0.2em] font-bold">Club</span>
               <span className="text-headline-md font-headline-md font-bold -mt-1">Pito Pérez</span>

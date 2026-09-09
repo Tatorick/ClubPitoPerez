@@ -92,7 +92,7 @@ export default function Footer() {
                 <img
                   alt="Pito Pérez Voleibol Club Logo"
                   className="relative h-14 w-auto object-contain"
-                  src="/logo-club-transparent.png"
+                  src="/logo_club.png"
                 />
               </div>
               <div className="flex flex-col">

@@ -45,10 +45,10 @@ export default function ConfigView() {
     telefono: '',
     email_club: '',
     logo_url: '',
-    autorizadorec_api_key: '',
-    autorizadorec_ambiente: 'pruebas',
-    autorizadorec_webhook_secret: '',
-    autorizadorec_base_url: 'https://sandbox.autorizadorec.com',
+    facturero_user: '',
+    facturero_password: '',
+    facturero_ambiente: 'pruebas',
+    facturero_producto_id: '',
     cod_establecimiento: '001',
     cod_punto_emision: '001',
     tarifa_iva: '0',
@@ -82,10 +82,10 @@ export default function ConfigView() {
           telefono:                   data.telefono || '',
           email_club:                 data.email_club || '',
           logo_url:                   data.logo_url || '',
-          autorizadorec_api_key:      data.autorizadorec_api_key || '',
-          autorizadorec_ambiente:     data.autorizadorec_ambiente || 'pruebas',
-          autorizadorec_webhook_secret: data.autorizadorec_webhook_secret || '',
-          autorizadorec_base_url:     data.autorizadorec_base_url || 'https://sandbox.autorizadorec.com',
+          facturero_user:             data.facturero_user || '',
+          facturero_password:         data.facturero_password || '',
+          facturero_ambiente:         data.facturero_ambiente || 'pruebas',
+          facturero_producto_id:      data.facturero_producto_id || '',
           cod_establecimiento:        data.cod_establecimiento || '001',
           cod_punto_emision:          data.cod_punto_emision || '001',
           tarifa_iva:                 data.tarifa_iva || '0',
@@ -173,13 +173,10 @@ export default function ConfigView() {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) setFieldErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
-    if (name === 'autorizadorec_ambiente') {
+    if (name === 'facturero_ambiente') {
       setForm(prev => ({
         ...prev,
         [name]: value,
-        autorizadorec_base_url: value === 'produccion'
-          ? 'https://api.autorizadorec.com'
-          : 'https://sandbox.autorizadorec.com',
       }));
     }
   };
@@ -219,10 +216,10 @@ export default function ConfigView() {
       telefono:                   form.telefono?.trim() || '',
       email_club:                 form.email_club?.trim() || '',
       logo_url:                   form.logo_url || null,
-      autorizadorec_api_key:      form.autorizadorec_api_key?.trim() || null,
-      autorizadorec_ambiente:     form.autorizadorec_ambiente || 'pruebas',
-      autorizadorec_webhook_secret: form.autorizadorec_webhook_secret?.trim() || null,
-      autorizadorec_base_url:     form.autorizadorec_base_url || 'https://sandbox.autorizadorec.com',
+      facturero_user:             form.facturero_user?.trim() || null,
+      facturero_password:         form.facturero_password?.trim() || null,
+      facturero_ambiente:         form.facturero_ambiente || 'pruebas',
+      facturero_producto_id:      form.facturero_producto_id?.trim() || null,
       cod_establecimiento:        form.cod_establecimiento?.trim() || '001',
       cod_punto_emision:          form.cod_punto_emision?.trim() || '001',
       tarifa_iva:                 form.tarifa_iva || '0',
@@ -256,22 +253,30 @@ export default function ConfigView() {
   };
 
   const handleTestApi = async () => {
-    if (!form.autorizadorec_api_key) {
-      setTestResult({ ok: false, message: 'Ingresa primero tu API Key de AutorizadorEC.' });
+    if (!form.facturero_user || !form.facturero_password) {
+      setTestResult({ ok: false, message: 'Ingresa tu usuario y contraseña de Facturero Móvil.' });
       return;
     }
     setTestingApi(true);
     setTestResult(null);
     try {
-      const baseUrl = form.autorizadorec_base_url || 'https://sandbox.autorizadorec.com';
-      const res = await fetch(`${baseUrl}/api/v1/health`, {
-        headers: { Authorization: `Bearer ${form.autorizadorec_api_key}` },
+      const baseUrl = form.facturero_ambiente === 'produccion' 
+        ? 'https://app.factureromovil.com/api' 
+        : 'http://apptest.factureromovil.com/api';
+        
+      const res = await fetch(`${baseUrl}/login_check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          _username: form.facturero_user,
+          _password: form.facturero_password
+        })
       });
       if (res.ok) {
-        setTestResult({ ok: true, message: `✅ Conexión exitosa con AutorizadorEC (${form.autorizadorec_ambiente}).` });
+        setTestResult({ ok: true, message: `✅ Conexión exitosa con Facturero Móvil (${form.facturero_ambiente}).` });
       } else {
         const data = await res.json().catch(() => ({}));
-        setTestResult({ ok: false, message: `❌ Error ${res.status}: ${data?.message || 'API Key inválida o sin acceso.'}` });
+        setTestResult({ ok: false, message: `❌ Error ${res.status}: Credenciales inválidas.` });
       }
     } catch (err) {
       setTestResult({ ok: false, message: `❌ No se pudo conectar: ${err.message}` });
@@ -299,7 +304,8 @@ export default function ConfigView() {
   const configCompletaParaFacturar = form.ruc.length === 13
     && form.razon_social.trim()
     && form.direccion_matriz.trim()
-    && form.autorizadorec_api_key.trim();
+    && form.facturero_user.trim()
+    && form.facturero_password.trim();
 
   if (loading) {
     return (
@@ -471,8 +477,8 @@ export default function ConfigView() {
                 </p>
                 <p className="text-xs opacity-75 mt-0.5">
                   {configCompletaParaFacturar
-                    ? `Ambiente: ${form.autorizadorec_ambiente === 'produccion' ? '🔵 Producción' : '🟡 Pruebas (Sandbox)'}`
-                    : 'Completa los datos del Club y el API Key de AutorizadorEC para activar la facturación.'}
+                    ? `Ambiente: ${form.facturero_ambiente === 'produccion' ? '🔵 Producción' : '🟡 Pruebas'}`
+                    : 'Completa los datos del Club y credenciales de Facturero Móvil para activar la facturación.'}
                 </p>
               </div>
             </div>
@@ -523,10 +529,10 @@ export default function ConfigView() {
             <div className="border-t border-gray-100 pt-5">
               <h3 className="font-bold text-gray-800 mb-1 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px] text-gray-500">api</span>
-                Integración AutorizadorEC
-                {form.autorizadorec_api_key && (
+                Integración Facturero Móvil
+                {form.facturero_user && (
                   <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    form.autorizadorec_ambiente === 'produccion'
+                    form.facturero_ambiente === 'produccion'
                       ? 'bg-blue-100 text-blue-700'
                       : 'bg-amber-100 text-amber-700'
                   }`}>
@@ -534,25 +540,24 @@ export default function ConfigView() {
                   </span>
                 )}
               </h3>
-              <p className="text-xs text-gray-500 mb-4">Conecta con AutorizadorEC para emitir facturas electrónicas SRI.</p>
+              <p className="text-xs text-gray-500 mb-4">Conecta con Facturero Móvil para emitir facturas electrónicas SRI.</p>
 
-              {form.autorizadorec_ambiente === 'produccion' && (
+              {form.facturero_ambiente === 'produccion' && (
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 border border-blue-300 text-blue-800 text-xs mb-4">
                   <span className="material-symbols-outlined text-[16px] shrink-0">verified</span>
                   <p><strong>Modo Producción activo.</strong> Las facturas emitidas serán documentos oficiales válidos ante el SRI.</p>
                 </div>
               )}
 
-              {!form.autorizadorec_api_key && (
+              {!form.facturero_user && (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 text-xs mb-4">
                   <span className="material-symbols-outlined text-[20px] text-gray-400 shrink-0">help</span>
                   <div className="space-y-1">
-                    <p className="font-bold text-gray-800">¿Aún no tienes cuenta en AutorizadorEC?</p>
+                    <p className="font-bold text-gray-800">¿No tienes credenciales de Facturero Móvil?</p>
                     <ol className="list-decimal list-inside space-y-0.5 text-gray-600">
-                      <li>Regístrate en <strong>autorizadorec.com</strong> (Plan Básico $5/mes)</li>
-                      <li>Sube tu certificado <strong>.p12</strong> en su plataforma</li>
-                      <li>Copia tu <strong>API Key</strong> desde su dashboard</li>
-                      <li>Pégala aquí y guarda</li>
+                      <li>Contacta a <strong>Facturero Móvil</strong> para crear tu cuenta</li>
+                      <li>Pídeles tu <strong>Usuario API</strong> y <strong>Clave API</strong> (diferentes a las del portal web)</li>
+                      <li>Ingrésalas aquí abajo</li>
                     </ol>
                   </div>
                 </div>
@@ -562,17 +567,17 @@ export default function ConfigView() {
                 <ConfigField label="Ambiente">
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { val: 'pruebas', label: 'Pruebas (Sandbox)', icon: 'science', desc: 'Documentos de prueba gratuitos. Usar para desarrollo.' },
-                      { val: 'produccion', label: 'Producción', icon: 'verified', desc: 'Facturas reales autorizadas por el SRI.' },
+                      { val: 'pruebas', label: 'Pruebas', icon: 'science', desc: 'Facturas de prueba sin validez.' },
+                      { val: 'produccion', label: 'Producción', icon: 'verified', desc: 'Facturas reales SRI.' },
                     ].map(opt => (
                       <label key={opt.val}
                         className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                          form.autorizadorec_ambiente === opt.val
+                          form.facturero_ambiente === opt.val
                             ? opt.val === 'produccion' ? 'border-blue-500 bg-blue-50' : 'border-amber-400 bg-amber-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}>
-                        <input type="radio" name="autorizadorec_ambiente" value={opt.val}
-                          checked={form.autorizadorec_ambiente === opt.val}
+                        <input type="radio" name="facturero_ambiente" value={opt.val}
+                          checked={form.facturero_ambiente === opt.val}
                           onChange={handleChange} className="mt-0.5" />
                         <div>
                           <p className="font-bold text-sm text-gray-800 flex items-center gap-1">
@@ -586,53 +591,41 @@ export default function ConfigView() {
                   </div>
                 </ConfigField>
 
-                <ConfigField label="API Key de AutorizadorEC"
-                  hint="Empieza con sk_live_ (producción) o sk_test_ (pruebas). Se guarda de forma segura.">
-                  <div className="relative">
-                    <input name="autorizadorec_api_key"
-                      type={showApiKey ? 'text' : 'password'}
-                      value={form.autorizadorec_api_key} onChange={handleChange}
-                      placeholder="sk_test_xxxxxxxxxxxxxxxxxxxx"
-                      className={`${inputCls} pr-10`} />
-                    <button type="button" onClick={() => setShowApiKey(p => !p)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      <span className="material-symbols-outlined text-[18px]">
-                        {showApiKey ? 'visibility_off' : 'visibility'}
-                      </span>
-                    </button>
-                  </div>
-                </ConfigField>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ConfigField label="Usuario API Facturero Móvil"
+                    hint="Usuario proporcionado por Facturero Móvil para la API.">
+                    <input name="facturero_user"
+                      type="text"
+                      value={form.facturero_user} onChange={handleChange}
+                      placeholder="APITEST"
+                      className={inputCls} />
+                  </ConfigField>
 
-                <ConfigField label="Webhook Secret"
-                  hint="Lo encuentras en AutorizadorEC → Webhooks → Secreto de firma HMAC.">
-                  <div className="relative">
-                    <input name="autorizadorec_webhook_secret"
-                      type={showWebhookSecret ? 'text' : 'password'}
-                      value={form.autorizadorec_webhook_secret} onChange={handleChange}
-                      placeholder="whsec_xxxxxxxxxxxxxxxxxxxx"
-                      className={`${inputCls} pr-10`} />
-                    <button type="button" onClick={() => setShowWebhookSecret(p => !p)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      <span className="material-symbols-outlined text-[18px]">
-                        {showWebhookSecret ? 'visibility_off' : 'visibility'}
-                      </span>
-                    </button>
-                  </div>
-                </ConfigField>
+                  <ConfigField label="Clave API Facturero Móvil"
+                    hint="Contraseña de la API">
+                    <div className="relative">
+                      <input name="facturero_password"
+                        type={showApiKey ? 'text' : 'password'}
+                        value={form.facturero_password} onChange={handleChange}
+                        placeholder="123456"
+                        className={`${inputCls} pr-10`} />
+                      <button type="button" onClick={() => setShowApiKey(p => !p)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <span className="material-symbols-outlined text-[18px]">
+                          {showApiKey ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
+                  </ConfigField>
+                </div>
 
-                <ConfigField label="URL de Webhook (copia esto en AutorizadorEC)"
-                  hint="Ve a AutorizadorEC → Webhooks → Agregar endpoint → Pega esta URL.">
-                  <div className="flex gap-2">
-                    <input readOnly
-                      value={`${window.location.origin}/api/webhook-autorizadorec`}
-                      className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 bg-gray-50 cursor-default" />
-                    <button type="button"
-                      onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/webhook-autorizadorec`)}
-                      className="px-3 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-xs font-semibold hover:bg-gray-50 transition-colors flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[16px]">content_copy</span>
-                      Copiar
-                    </button>
-                  </div>
+                <ConfigField label="ID del Producto (Servicio) en Facturero Móvil"
+                  hint="Es el ID numérico del producto creado en Facturero Móvil para cobrar las pensiones (Ej: 1868).">
+                  <input name="facturero_producto_id"
+                    type="text"
+                    value={form.facturero_producto_id} onChange={handleChange}
+                    placeholder="1868"
+                    className={inputCls} />
                 </ConfigField>
 
                 <div className="pt-1">
@@ -640,7 +633,7 @@ export default function ConfigView() {
                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#001f3f] text-[#001f3f] text-sm font-semibold hover:bg-[#001f3f]/5 transition-colors disabled:opacity-50">
                     {testingApi
                       ? <><span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Probando conexión...</>
-                      : <><span className="material-symbols-outlined text-[16px]">network_check</span> Probar conexión con AutorizadorEC</>
+                      : <><span className="material-symbols-outlined text-[16px]">network_check</span> Probar conexión con Facturero Móvil</>
                     }
                   </button>
                   {testResult && (

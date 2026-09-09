@@ -227,22 +227,19 @@ export default function ConfigView() {
     };
 
     let error = null;
-    if (configId) {
-      const res = await supabase.from('config_club').update(payload).eq('id', configId);
-      error = res.error;
-    } else {
-      const { data: existing } = await supabase.from('config_club').select('id').maybeSingle();
-      if (existing?.id) {
-        setConfigId(existing.id);
-        const res = await supabase.from('config_club').update(payload).eq('id', existing.id);
-        error = res.error;
-      } else {
-        const res = await supabase.from('config_club').insert([payload]).select().maybeSingle();
-        if (res.data?.id) setConfigId(res.data.id);
-        error = res.error;
-      }
-    }
-
+    
+    // Forzamos el ID a 1 para que siempre sea la misma fila
+    const configIdToSave = configId || 1;
+    
+    const { error: upsertErr, data } = await supabase
+      .from('config_club')
+      .upsert({ id: configIdToSave, ...payload })
+      .select()
+      .maybeSingle();
+      
+    error = upsertErr;
+    if (data?.id) setConfigId(data.id);
+    
     setSaving(false);
     if (error) {
       setSaveError(`Error al guardar: ${error.message}`);

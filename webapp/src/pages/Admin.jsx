@@ -9,6 +9,7 @@ import { derivarEstadoMeses, startYear, MESES_BASE } from '../utils/pagos';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useClubConfig } from '../hooks/useClubConfig';
+import { factureroService } from '../services/factureroService';
 
 // ── Helpers ────────────────────────────────────────────────────────
 function getShortRepName(fullName) {
@@ -71,13 +72,63 @@ function StatCard({ label, value, icon, color }) {
 function DashboardView({ miembros, precioPension }) {
   const [transacciones, setTransacciones] = useState([]);
   const [loadingTxn, setLoadingTxn] = useState(true);
+  const [facturandoId, setFacturandoId] = useState(null);
+
+  const handleEmitirFactura = async (t) => {
+    if (!t.miembros) return alert("Faltan datos del deportista");
+    try {
+      setFacturandoId(t.id);
+      
+      // 1. Crear/Obtener cliente
+      const resCliente = await factureroService.crearCliente({
+        cedula: t.miembros.cedula,
+        nombre: t.miembros.nombres,
+        direccion: "Quito",
+        telefono: t.miembros.madre_telefono || t.miembros.padre_telefono || "0999999999",
+        email: "correo@ejemplo.com" // Podríamos pedir esto en el registro en el futuro
+      });
+      
+      // Dependiendo de la API, usamos el ID retornado
+      const clienteId = resCliente?.id || resCliente?.cliente?.id || 43604; // fallback de prueba
+      
+      // 2. Emitir factura
+      const resFactura = await factureroService.emitirFactura(clienteId, t.monto_real);
+      
+      // 3. Actualizar transacción en Supabase
+      const { error } = await supabase
+        .from('transacciones')
+        .update({ 
+          factura_id: resFactura.numeroDocumento || 'TBD',
+          factura_pdf: resFactura.pdf || '',
+          factura_xml: resFactura.xml || ''
+        })
+        .eq('id', t.id);
+
+      if (error) throw error;
+
+      // 4. Reflejar en la UI
+      setTransacciones(prev => prev.map(tx => tx.id === t.id ? {
+        ...tx, 
+        factura_id: resFactura.numeroDocumento,
+        factura_pdf: resFactura.pdf,
+        factura_xml: resFactura.xml
+      } : tx));
+      
+      alert("Factura emitida exitosamente");
+    } catch (error) {
+      console.error("Error al facturar:", error);
+      alert("Ocurrió un error al emitir la factura: " + error.message);
+    } finally {
+      setFacturandoId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchTxn = async () => {
       setLoadingTxn(true);
       const { data } = await supabase
         .from('transacciones')
-        .select('*, miembros(nombres)')
+        .select('*, miembros(*)')
         .order('fecha_pago', { ascending: false });
       setTransacciones(data || []);
       setLoadingTxn(false);
@@ -278,6 +329,7 @@ function DashboardView({ miembros, precioPension }) {
                   <th className="px-5 py-3 text-left">Meses</th>
                   <th className="px-5 py-3 text-right">Monto</th>
                   <th className="px-5 py-3 text-center">Estado</th>
+                  <th className="px-5 py-3 text-center">Factura</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -289,6 +341,10 @@ function DashboardView({ miembros, precioPension }) {
                     ? 'bg-red-100 text-red-700'
                     : 'bg-amber-100 text-amber-700';
                   const label = est === 'aprobado' || !est ? 'Aprobado' : est === 'rechazado' ? 'Rechazado' : 'En revisión';
+                  
+                  const isAprobado = est === 'aprobado' || !est;
+                  const hasFactura = !!t.factura_pdf;
+
                   return (
                     <tr key={t.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3 font-medium text-gray-800">{t.miembros?.nombres || '—'}</td>
@@ -297,6 +353,29 @@ function DashboardView({ miembros, precioPension }) {
                       <td className="px-5 py-3 text-right font-bold text-gray-800">${Number(t.monto_real || 0).toFixed(2)}</td>
                       <td className="px-5 py-3 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badge}`}>{label}</span>
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                        {hasFactura ? (
+                          <a href={t.factura_pdf} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors">
+                            <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                            Ver
+                          </a>
+                        ) : isAprobado ? (
+                          <button 
+                            onClick={() => handleEmitirFactura(t)}
+                            disabled={facturandoId === t.id}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-green-500 px-2 py-1 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50"
+                          >
+                            {facturandoId === t.id ? (
+                              <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                            ) : (
+                              <span className="material-symbols-outlined text-[14px]">receipt</span>
+                            )}
+                            Emitir
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-gray-400">-</span>
+                        )}
                       </td>
                     </tr>
                   );

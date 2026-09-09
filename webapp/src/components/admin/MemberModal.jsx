@@ -957,7 +957,7 @@ function FichaTab({ member, onUpdateMember }) {
           facturacion_direccion: fichaForm.facturacion_direccion,
           facturacion_telefono: fichaForm.facturacion_telefono,
           facturacion_correo:   fichaForm.facturacion_correo,
-          descuento_porcentaje: fichaForm.descuento_porcentaje,
+          descuento_porcentaje: fichaForm.descuento_porcentaje !== '' && fichaForm.descuento_porcentaje !== null && fichaForm.descuento_porcentaje !== undefined ? Number(fichaForm.descuento_porcentaje) : 0,
         })
         .eq('id', member.id)
         .select()
@@ -1041,7 +1041,7 @@ function FichaTab({ member, onUpdateMember }) {
             </EditSection>
             {/* Financiero */}
             <EditSection title="Datos Financieros" icon="payments">
-              <EditField label="Descuento Pensión (%)" name="descuento_porcentaje" type="number" value={fichaForm.descuento_porcentaje || ''} onChange={handleFichaChange} />
+              <EditField label="Descuento Pensión (%)" name="descuento_porcentaje" type="number" value={fichaForm.descuento_porcentaje ?? ''} onChange={handleFichaChange} />
             </EditSection>
             {/* Médica */}
             <EditSection title="Ficha Médica" icon="medical_information">
@@ -1185,6 +1185,9 @@ export default function MemberModal({ member: initialMember, onClose, onDelete }
   const [member, setMember] = useState(initialMember);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Cuando un sub-tab (FichaTab, PagosTab) actualiza el miembro, reflejar en el state principal
+  const handleUpdateMember = (updated) => setMember(updated);
 
   const handleDelete = async () => {
     setDeleting(true);

@@ -42,7 +42,7 @@ export default function Navbar() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            <img alt="Pito Pérez Voleibol Club Logo" className="h-12 md:h-16 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-gGkzly7uISZFSdfCQ1t29d4cPhaUkWyRZNzI5Hab5W6b7u3aV1QhtzLhA39R2yxtiFf2fhDs7fjw3N7i2SVL28PXAMOgnBo15oAvtqfmB9WU7jYSk09mVBZhdJT2PNe5WVp_QaqTmL_ibrTd44bdJpk5rXQK04QSZ0jynH-k91ybxPhy-bkVNQVDpLm6eQ2dZ_42ZkbdCdgw_MBKJSwux0vKOaL3SA4he4v7-Q6Ykoie4BhTvVdYNdCBl-kQEfXg7w" />
+            <img alt="Pito Pérez Voleibol Club Logo" className="h-12 md:h-16 w-auto object-contain" src="/logo-club-transparent.png" />
             <div className="hidden md:flex flex-col text-primary ml-2 leading-tight justify-center">
               <span className="font-caption text-[10px] text-secondary uppercase tracking-[0.2em] font-bold">Club</span>
               <span className="text-headline-md font-headline-md font-bold -mt-1">Pito Pérez</span>

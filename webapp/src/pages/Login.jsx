@@ -50,7 +50,7 @@ export default function Login() {
             <img
               alt="Logo"
               className="h-16 w-auto"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-gGkzly7uISZFSdfCQ1t29d4cPhaUkWyRZNzI5Hab5W6b7u3aV1QhtzLhA39R2yxtiFf2fhDs7fjw3N7i2SVL28PXAMOgnBo15oAvtqfmB9WU7jYSk09mVBZhdJT2PNe5WVp_QaqTmL_ibrTd44bdJpk5rXQK04QSZ0jynH-k91ybxPhy-bkVNQVDpLm6eQ2dZ_42ZkbdCdgw_MBKJSwux0vKOaL3SA4he4v7-Q6Ykoie4BhTvVdYNdCBl-kQEfXg7w"
+              src="/logo-club-transparent.png"
             />
           </Link>
           <h1 className="font-headline-md text-headline-md text-primary text-center">Bienvenido de nuevo</h1>

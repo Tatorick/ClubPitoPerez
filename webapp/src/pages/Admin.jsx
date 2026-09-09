@@ -525,7 +525,7 @@ export default function Admin() {
         <div className="flex items-center gap-3 p-6 border-b border-white/10">
           <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
             <img alt="Logo" className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXDDAI55wedoCiQm3_bC4Z1j9JIF9mFR67JUDdt386qaJxIHKhTUgdMXivwI1uji69h9fy8AeFtXmDrvj0Z0L8nm9NXpJh7CByz-vjhmikLahd96mXP2sze-Ui6qcpoYK0_2fzOZmyQsCk1_NqPM8sAMHoFqRG3Fv9hS3MFC3cQehtecZc1sUf4dJO_b8ceNixf2IM1Xx4lvUvxALi96jRztUSkM4CDyvjWxXCQ-9R5-Mzo1n0HzhkxbiZgvIe-nxBIA" />
+              src="/logo-club-transparent.png" />
           </div>
           <div>
             <p className="text-white font-bold text-sm leading-tight">Portal Admin</p>

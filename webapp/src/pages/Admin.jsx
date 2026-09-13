@@ -79,48 +79,21 @@ function DashboardView({ miembros, precioPension }) {
     try {
       setFacturandoId(t.id);
       
-      // 0. Cargar config e iniciar sesión en Facturero Móvil
-      await factureroService.loadConfig();
-      await factureroService.login();
-
-      // 1. Crear/Obtener cliente
-      const resCliente = await factureroService.crearCliente({
-        cedula: t.miembros.cedula,
-        nombre: t.miembros.nombres,
-        direccion: "Quito",
-        telefono: t.miembros.madre_telefono || t.miembros.padre_telefono || "0999999999",
-        email: "correo@ejemplo.com" // Podríamos pedir esto en el registro en el futuro
+      const resFactura = await factureroService.emitirFacturaTransaccion({
+        transaccion: t,
+        miembro: t.miembros
       });
-      
-      // Dependiendo de la API, usamos el ID retornado
-      const clienteId = resCliente?.id || resCliente?.cliente?.id || resCliente?.idCliente || 43604; // fallback de prueba
-      
-      const tipoProducto = (t.meses_cubiertos || []).includes('MAT') ? 'matricula' : 'pension';
 
-      // 2. Emitir factura
-      const resFactura = await factureroService.emitirFactura(clienteId, t.monto_real, tipoProducto);
-      
-      // 3. Actualizar transacción en Supabase
-      const { error } = await supabase
-        .from('transacciones')
-        .update({ 
-          factura_id: resFactura.numeroDocumento || resFactura.id || 'TBD',
-          factura_pdf: resFactura.pdf || resFactura.urlPdf || '',
-          factura_xml: resFactura.xml || resFactura.urlXml || ''
-        })
-        .eq('id', t.id);
-
-      if (error) throw error;
-
-      // 4. Reflejar en la UI
+      // Reflejar en la UI
       setTransacciones(prev => prev.map(tx => tx.id === t.id ? {
         ...tx, 
         factura_id: resFactura.numeroDocumento,
         factura_pdf: resFactura.pdf,
-        factura_xml: resFactura.xml
+        factura_xml: resFactura.xml,
+        estado_factura: 'autorizado'
       } : tx));
       
-      alert("\u2705 Factura emitida exitosamente. N\u00famero: " + (resFactura.numeroDocumento || resFactura.id || 'Ver en Facturero M\u00f3vil'));
+      alert(`✅ Factura emitida exitosamente.\nNúmero: ${resFactura.numeroDocumento || 'Ver en Facturero Móvil'}\nTotal: $${(resFactura.detalles || []).reduce((s, it) => s + ((it.cantidad * it.precioUnitario) - it.descuento), 0).toFixed(2)}`);
     } catch (error) {
       console.error("Error al facturar:", error);
       alert("Ocurrió un error al emitir la factura: " + error.message);

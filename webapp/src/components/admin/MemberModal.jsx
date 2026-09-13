@@ -3,6 +3,7 @@ import { derivarEstadoMeses, startYear } from '../../utils/pagos';
 import { supabase } from '../../lib/supabase';
 import { LISTA_GRUPOS, ENTRENADORES_PREDETERMINADOS, GRUPOS } from '../../data/horariosData';
 import { useClubConfig } from '../../hooks/useClubConfig';
+import { factureroService } from '../../services/factureroService';
 
 // ─── Config de estilos por estado ────────────────────────────────────────────
 const ESTADO_CONFIG = {
@@ -452,31 +453,19 @@ function PagosTab({ member, onUpdateMember }) {
           // ── Emitir factura electrónica si el admin lo solicitó ──────────────
           if (emitirFactura) {
             try {
-              // Obtener el token JWT del administrador para autenticar la llamada
-              const { data: { session } } = await supabase.auth.getSession();
-              const authToken = session?.access_token || '';
-
-              const res = await fetch('/api/emitir-factura', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${authToken}`,
-                },
-                body: JSON.stringify({
-                  transaccion_id: dbTxn.id,
-                  miembro_id: member.id,
-                }),
+              const resFactura = await factureroService.emitirFacturaTransaccion({
+                transaccion: dbTxn,
+                miembro: member
               });
-              const facturaRes = await res.json();
-              if (!res.ok) {
-                console.warn('Factura no emitida:', facturaRes.error);
-                // Actualizar estado en la transacción guardada
-                nuevaTxn = { ...nuevaTxn, estado_factura: 'rechazada' };
-              } else {
-                nuevaTxn = { ...nuevaTxn, estado_factura: 'procesando', factura_id: facturaRes.factura_id };
-              }
+              nuevaTxn = {
+                ...nuevaTxn,
+                estado_factura: 'autorizado',
+                factura_id: resFactura.numeroDocumento,
+                factura_pdf: resFactura.pdf,
+                factura_xml: resFactura.xml
+              };
             } catch (err) {
-              console.error('Error llamando a emitir-factura:', err);
+              console.error('Error emitiendo factura con Facturero Móvil:', err);
               nuevaTxn = { ...nuevaTxn, estado_factura: 'rechazada' };
             }
           }
@@ -498,30 +487,24 @@ function PagosTab({ member, onUpdateMember }) {
   const handleReintentarFactura = async (txn) => {
     if (!member.id || !txn.id) return;
     try {
-      // Obtener el token JWT del administrador para autenticar la llamada
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token || '';
-
-      const res = await fetch('/api/emitir-factura', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ transaccion_id: txn.id, miembro_id: member.id }),
+      const resFactura = await factureroService.emitirFacturaTransaccion({
+        transaccion: txn,
+        miembro: member
       });
-      const data = await res.json();
-      if (res.ok) {
-        // Optimistic update: marcar como procesando en la UI
-        const updatedTxns = (member.transacciones || []).map(t =>
-          t.id === txn.id ? { ...t, estado_factura: 'procesando' } : t
-        );
-        if (onUpdateMember) onUpdateMember({ ...member, transacciones: updatedTxns });
-      } else {
-        alert(`No se pudo reintentar la factura: ${data.error}`);
-      }
+      // Actualizar en la UI
+      const updatedTxns = (member.transacciones || []).map(t =>
+        t.id === txn.id ? {
+          ...t,
+          estado_factura: 'autorizado',
+          factura_id: resFactura.numeroDocumento,
+          factura_pdf: resFactura.pdf,
+          factura_xml: resFactura.xml
+        } : t
+      );
+      if (onUpdateMember) onUpdateMember({ ...member, transacciones: updatedTxns });
+      alert(`✅ Factura emitida exitosamente: ${resFactura.numeroDocumento || 'Ver en Facturero Móvil'}`);
     } catch (err) {
-      alert(`Error al reintentar: ${err.message}`);
+      alert(`Error al reintentar emisión de factura: ${err.message}`);
     }
   };
 

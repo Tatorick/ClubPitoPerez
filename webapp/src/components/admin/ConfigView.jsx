@@ -48,7 +48,8 @@ export default function ConfigView() {
     facturero_user: '',
     facturero_password: '',
     facturero_ambiente: 'pruebas',
-    facturero_producto_id: '',
+    facturero_producto_matricula_id: '',
+    facturero_producto_pension_id: '',
     cod_establecimiento: '001',
     cod_punto_emision: '001',
     tarifa_iva: '0',
@@ -85,7 +86,8 @@ export default function ConfigView() {
           facturero_user:             data.facturero_user || '',
           facturero_password:         data.facturero_password || '',
           facturero_ambiente:         data.facturero_ambiente || 'pruebas',
-          facturero_producto_id:      data.facturero_producto_id || '',
+          facturero_producto_matricula_id: data.facturero_producto_matricula_id || '',
+          facturero_producto_pension_id:   data.facturero_producto_pension_id || '',
           cod_establecimiento:        data.cod_establecimiento || '001',
           cod_punto_emision:          data.cod_punto_emision || '001',
           tarifa_iva:                 data.tarifa_iva || '0',
@@ -219,7 +221,8 @@ export default function ConfigView() {
       facturero_user:             form.facturero_user?.trim() || null,
       facturero_password:         form.facturero_password?.trim() || null,
       facturero_ambiente:         form.facturero_ambiente || 'pruebas',
-      facturero_producto_id:      form.facturero_producto_id?.trim() || null,
+      facturero_producto_matricula_id: form.facturero_producto_matricula_id?.trim() || null,
+      facturero_producto_pension_id:   form.facturero_producto_pension_id?.trim() || null,
       cod_establecimiento:        form.cod_establecimiento?.trim() || '001',
       cod_punto_emision:          form.cod_punto_emision?.trim() || '001',
       tarifa_iva:                 form.tarifa_iva || '0',
@@ -259,7 +262,7 @@ export default function ConfigView() {
     try {
       const baseUrl = form.facturero_ambiente === 'produccion' 
         ? 'https://app.factureromovil.com/api' 
-        : 'http://apptest.factureromovil.com/api';
+        : 'https://apptest.factureromovil.com/api';
         
       const res = await fetch(`${baseUrl}/login_check`, {
         method: 'POST',
@@ -616,14 +619,25 @@ export default function ConfigView() {
                   </ConfigField>
                 </div>
 
-                <ConfigField label="ID del Producto (Servicio) en Facturero Móvil"
-                  hint="Es el ID numérico del producto creado en Facturero Móvil para cobrar las pensiones (Ej: 1868).">
-                  <input name="facturero_producto_id"
-                    type="text"
-                    value={form.facturero_producto_id} onChange={handleChange}
-                    placeholder="1868"
-                    className={inputCls} />
-                </ConfigField>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ConfigField label="ID Producto Matrícula (001)"
+                    hint="ID numérico del producto en Facturero Móvil para la Matrícula.">
+                    <input name="facturero_producto_matricula_id"
+                      type="text"
+                      value={form.facturero_producto_matricula_id} onChange={handleChange}
+                      placeholder="1868"
+                      className={inputCls} />
+                  </ConfigField>
+
+                  <ConfigField label="ID Producto Mensualidad (002)"
+                    hint="ID numérico del producto en Facturero Móvil para la Mensualidad.">
+                    <input name="facturero_producto_pension_id"
+                      type="text"
+                      value={form.facturero_producto_pension_id} onChange={handleChange}
+                      placeholder="1869"
+                      className={inputCls} />
+                  </ConfigField>
+                </div>
 
                 <div className="pt-1">
                   <button type="button" onClick={handleTestApi} disabled={testingApi}

@@ -89,10 +89,12 @@ function DashboardView({ miembros, precioPension }) {
       });
       
       // Dependiendo de la API, usamos el ID retornado
-      const clienteId = resCliente?.id || resCliente?.cliente?.id || 43604; // fallback de prueba
+      const clienteId = resCliente?.id || resCliente?.cliente?.id || resCliente?.idCliente || 43604; // fallback de prueba
       
+      const tipoProducto = (t.meses_cubiertos || []).includes('MAT') ? 'matricula' : 'pension';
+
       // 2. Emitir factura
-      const resFactura = await factureroService.emitirFactura(clienteId, t.monto_real);
+      const resFactura = await factureroService.emitirFactura(clienteId, t.monto_real, tipoProducto);
       
       // 3. Actualizar transacción en Supabase
       const { error } = await supabase

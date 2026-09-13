@@ -3,15 +3,17 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { login, user, isAdmin } = useAuth();
+  const { login, resetPassword, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
   const from = location.state?.from?.pathname || '/';
 
@@ -25,10 +27,16 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     setLoading(true);
     try {
-      await login(email, password);
-      // La redirección la maneja el useEffect cuando 'user' e 'isAdmin' se actualizan
+      if (isForgotPassword) {
+        await resetPassword(email);
+        setMessage('Se ha enviado un enlace a tu correo para restablecer tu contraseña.');
+      } else {
+        await login(email, password);
+        // La redirección la maneja el useEffect
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -53,9 +61,11 @@ export default function Login() {
               src="/logo_club.png"
             />
           </Link>
-          <h1 className="font-headline-md text-headline-md text-primary text-center">Bienvenido de nuevo</h1>
+          <h1 className="font-headline-md text-headline-md text-primary text-center">
+            {isForgotPassword ? 'Recuperar Contraseña' : 'Bienvenido de nuevo'}
+          </h1>
           <p className="font-body-md text-body-md text-on-surface-variant text-center mt-2">
-            Inicia sesión para acceder a tu perfil
+            {isForgotPassword ? 'Ingresa tu correo para enviarte un enlace de recuperación' : 'Inicia sesión para acceder a tu perfil'}
           </p>
         </div>
 
@@ -81,41 +91,50 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="font-label-bold text-label-bold text-on-surface flex justify-between" htmlFor="password">
-              <span>Contraseña</span>
-              <a href="#" className="text-secondary hover:underline font-caption text-caption">¿Olvidaste tu contraseña?</a>
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">lock</span>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                placeholder="••••••••"
-                className="w-full pl-10 pr-10 py-3 bg-surface-bright border border-outline-variant rounded-lg font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  {showPassword ? 'visibility_off' : 'visibility'}
-                </span>
-              </button>
+          {!isForgotPassword && (
+            <div className="flex flex-col gap-1">
+              <label className="font-label-bold text-label-bold text-on-surface flex justify-between" htmlFor="password">
+                <span>Contraseña</span>
+                <button type="button" onClick={() => { setIsForgotPassword(true); setError(''); setMessage(''); }} className="text-secondary hover:underline font-caption text-caption">¿Olvidaste tu contraseña?</button>
+              </label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">lock</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-3 bg-surface-bright border border-outline-variant rounded-lg font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                  required={!isForgotPassword}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Mensaje de error */}
           {error && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-error-container text-on-error-container text-sm font-semibold animate-pulse">
               <span className="material-symbols-outlined text-[18px]">error</span>
               {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-100 text-green-800 text-sm font-semibold">
+              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              {message}
             </div>
           )}
 
@@ -127,12 +146,22 @@ export default function Login() {
             {loading ? (
               <>
                 <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
-                Iniciando sesión…
+                {isForgotPassword ? 'Enviando...' : 'Iniciando sesión…'}
               </>
             ) : (
-              'Iniciar Sesión'
+              isForgotPassword ? 'Enviar enlace' : 'Iniciar Sesión'
             )}
           </button>
+          
+          {isForgotPassword && (
+            <button
+              type="button"
+              onClick={() => { setIsForgotPassword(false); setError(''); setMessage(''); }}
+              className="w-full bg-surface-bright text-secondary font-label-bold text-label-bold py-3 rounded-lg border border-outline-variant hover:bg-surface transition-all mt-2"
+            >
+              Volver a Iniciar Sesión
+            </button>
+          )}
         </form>
 
         <div className="mt-8 text-center border-t border-outline-variant pt-6">

@@ -21,9 +21,7 @@ class FactureroService {
     const username = this.config?.facturero_user || import.meta.env.VITE_FACTURERO_USER;
     const password = this.config?.facturero_password || import.meta.env.VITE_FACTURERO_PASSWORD;
     const ambiente = this.config?.facturero_ambiente || 'pruebas';
-    const baseUrl = ambiente === 'produccion' 
-      ? 'https://app.factureromovil.com/api' 
-      : 'http://apptest.factureromovil.com/api';
+    const baseUrl = ambiente === 'produccion' ? 'https://app.factureromovil.com/api' : 'https://apptest.factureromovil.com/api';
 
     if (!username || !password) {
       throw new Error('Faltan credenciales de Facturero Móvil en la Configuración del Club');
@@ -46,7 +44,7 @@ class FactureroService {
 
   async fetchWithAuth(endpoint, options = {}) {
     const ambiente = this.config?.facturero_ambiente || 'pruebas';
-    const baseUrl = ambiente === 'produccion' ? 'https://app.factureromovil.com/api' : 'http://apptest.factureromovil.com/api';
+    const baseUrl = ambiente === 'produccion' ? 'https://app.factureromovil.com/api' : 'https://apptest.factureromovil.com/api';
 
     const response = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
@@ -97,10 +95,13 @@ class FactureroService {
     return data;
   }
 
-  async emitirFactura(clienteId, monto) {
+  async emitirFactura(clienteId, monto, tipoProducto = 'pension') {
     if (!this.config) await this.loadConfig();
     const hoy = new Date().toISOString().split('T')[0];
-    const productoId = this.config?.facturero_producto_id || import.meta.env.VITE_FACTURERO_PRODUCTO_ID || "1868";
+    
+    const productoId = tipoProducto === 'matricula' 
+      ? (this.config?.facturero_producto_matricula_id || import.meta.env.VITE_FACTURERO_PRODUCTO_MATRICULA_ID || "1") 
+      : (this.config?.facturero_producto_pension_id || import.meta.env.VITE_FACTURERO_PRODUCTO_PENSION_ID || "2");
     
     const payload = {
       fechaEmision: hoy,
@@ -108,7 +109,7 @@ class FactureroService {
       infoFactura: {
         detallesFactura: [
           {
-            producto: productoId, // ID numérico o string dependiendo de la API, el manual dice producto: "87639"
+            producto: productoId,
             cantidad: 1.00,
             precioUnitario: parseFloat(monto),
             descuento: 0

@@ -15,6 +15,7 @@ const Login    = lazy(() => import('./pages/Login'));
 const Registro = lazy(() => import('./pages/Registro'));
 const Blog     = lazy(() => import('./pages/Blog'));
 const Galeria  = lazy(() => import('./pages/Galeria'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 // ── Spinner de transición de página ───────────────────────────────────────────
 function PageLoader() {
@@ -61,6 +62,7 @@ function AppContent() {
             <Route path="/galeria" element={<Galeria />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Rutas protegidas — requieren sesión activa */}
             <Route

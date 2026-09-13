@@ -425,7 +425,8 @@ function PagosTab({ member, onUpdateMember }) {
   const pagados    = mesesStatus.filter(m => ['pagado','adelanto'].includes(m.estado)).length;
   const vencidos   = mesesStatus.filter(m => m.estado === 'vencido').length;
   const enVerificacion = mesesStatus.filter(m => m.estado === 'en_verificacion').length;
-  const totalPagado = (member.transacciones || []).filter(t => t.estado === 'aprobado' || !t.estado).reduce((s, t) => s + Number(t.monto_real || 0), 0);
+  // Solo contar transacciones explícitamente aprobadas por el admin
+  const totalPagado = (member.transacciones || []).filter(t => t.estado_verificacion === 'aprobado').reduce((s, t) => s + Number(t.monto_real || 0), 0);
   const montoVencido = mesesStatus.filter(m => m.estado === 'vencido').reduce((s, m) => s + m.montoPension, 0);
 
   const handleSavePago = async (nuevaTxn) => {

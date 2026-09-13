@@ -79,6 +79,10 @@ function DashboardView({ miembros, precioPension }) {
     try {
       setFacturandoId(t.id);
       
+      // 0. Cargar config e iniciar sesión en Facturero Móvil
+      await factureroService.loadConfig();
+      await factureroService.login();
+
       // 1. Crear/Obtener cliente
       const resCliente = await factureroService.crearCliente({
         cedula: t.miembros.cedula,
@@ -100,9 +104,9 @@ function DashboardView({ miembros, precioPension }) {
       const { error } = await supabase
         .from('transacciones')
         .update({ 
-          factura_id: resFactura.numeroDocumento || 'TBD',
-          factura_pdf: resFactura.pdf || '',
-          factura_xml: resFactura.xml || ''
+          factura_id: resFactura.numeroDocumento || resFactura.id || 'TBD',
+          factura_pdf: resFactura.pdf || resFactura.urlPdf || '',
+          factura_xml: resFactura.xml || resFactura.urlXml || ''
         })
         .eq('id', t.id);
 
@@ -116,7 +120,7 @@ function DashboardView({ miembros, precioPension }) {
         factura_xml: resFactura.xml
       } : tx));
       
-      alert("Factura emitida exitosamente");
+      alert("\u2705 Factura emitida exitosamente. N\u00famero: " + (resFactura.numeroDocumento || resFactura.id || 'Ver en Facturero M\u00f3vil'));
     } catch (error) {
       console.error("Error al facturar:", error);
       alert("Ocurrió un error al emitir la factura: " + error.message);

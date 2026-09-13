@@ -53,52 +53,71 @@ export default function Horarios() {
           Horario Semanal de Entrenamiento
         </h2>
         
-        <div className="overflow-x-auto bg-surface/80 backdrop-blur-md border border-outline-variant rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-1">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-surface-variant/50 text-on-surface font-label-bold text-label-bold uppercase tracking-wider text-xs">
-                <th className="p-4 border-b border-outline-variant/50 rounded-tl-xl w-32">Hora</th>
-                <th className="p-4 border-b border-outline-variant/50">Lunes</th>
-                <th className="p-4 border-b border-outline-variant/50">Martes</th>
-                <th className="p-4 border-b border-outline-variant/50">Miércoles</th>
-                <th className="p-4 border-b border-outline-variant/50">Jueves</th>
-                <th className="p-4 border-b border-outline-variant/50">Viernes</th>
-              </tr>
-            </thead>
-            <tbody className="text-body-md text-on-surface-variant divide-y divide-outline-variant/30">
-              {HORARIOS_SEMANA.map((slot, i) => (
-                <tr key={i} className="hover:bg-surface-bright/40 transition-colors">
-                  <td className="p-4 font-label-bold text-primary whitespace-nowrap bg-surface-variant/10">{slot.hora}</td>
-                  {renderCell(slot.Lunes)}
-                  {renderCell(slot.Martes)}
-                  {renderCell(slot.Miércoles)}
-                  {renderCell(slot.Jueves)}
-                  {renderCell(slot.Viernes)}
+        {/* Horarios difuminados temporalmente mientras se actualizan — quitar el wrapper cuando estén listos */}
+        <div className="relative select-none">
+          {/* Overlay "Próximamente" */}
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-white/60 backdrop-blur-md border border-outline-variant/30 gap-3">
+            <span className="material-symbols-outlined text-primary" style={{fontSize:'40px'}}>update</span>
+            <p className="font-headline-sm text-headline-sm text-primary text-center px-4">
+              Horarios en actualización
+            </p>
+            <p className="font-body-sm text-body-sm text-on-surface-variant text-center px-6 max-w-xs">
+              Estamos ajustando los horarios de entrenamiento. Vuelve pronto o contáctanos para más información.
+            </p>
+          </div>
+          {/* Tabla original — sigue en el DOM, solo difuminada visualmente */}
+          <div className="overflow-x-auto bg-surface/80 backdrop-blur-md border border-outline-variant rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-1 blur-sm pointer-events-none">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="bg-surface-variant/50 text-on-surface font-label-bold text-label-bold uppercase tracking-wider text-xs">
+                  <th className="p-4 border-b border-outline-variant/50 rounded-tl-xl w-32">Hora</th>
+                  <th className="p-4 border-b border-outline-variant/50">Lunes</th>
+                  <th className="p-4 border-b border-outline-variant/50">Martes</th>
+                  <th className="p-4 border-b border-outline-variant/50">Miércoles</th>
+                  <th className="p-4 border-b border-outline-variant/50">Jueves</th>
+                  <th className="p-4 border-b border-outline-variant/50">Viernes</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-body-md text-on-surface-variant divide-y divide-outline-variant/30">
+                {HORARIOS_SEMANA.map((slot, i) => (
+                  <tr key={i} className="hover:bg-surface-bright/40 transition-colors">
+                    <td className="p-4 font-label-bold text-primary whitespace-nowrap bg-surface-variant/10">{slot.hora}</td>
+                    {renderCell(slot.Lunes)}
+                    {renderCell(slot.Martes)}
+                    {renderCell(slot.Miércoles)}
+                    {renderCell(slot.Jueves)}
+                    {renderCell(slot.Viernes)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Schedule Sábado */}
+        {/* Horario de sábado — difuminado temporalmente */}
         <div className="mt-4">
           <h3 className="font-headline-md text-headline-md text-secondary mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined">weekend</span>
             Horarios de Sábado
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {HORARIOS_SABADO.map((slot, i) => {
-              const grupo = GRUPOS[slot.grupo];
-              return (
-                <div key={i} className={`p-5 rounded-2xl border-l-4 ${grupo.estilo.replace('border-', 'border-l-')} flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow bg-white/50 backdrop-blur-sm`}>
-                  <div className="font-bold text-lg">{slot.hora}</div>
-                  <div>
-                    <div className="font-bold text-sm text-gray-800">{grupo.nombre}</div>
-                    <div className="text-xs opacity-80">{grupo.profesor}</div>
+          <div className="relative select-none">
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/60 backdrop-blur-md">
+              <p className="font-label-bold text-label-bold text-primary">Próximamente</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 blur-sm pointer-events-none">
+              {HORARIOS_SABADO.map((slot, i) => {
+                const grupo = GRUPOS[slot.grupo];
+                return (
+                  <div key={i} className={`p-5 rounded-2xl border-l-4 ${grupo.estilo.replace('border-', 'border-l-')} flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow bg-white/50 backdrop-blur-sm`}>
+                    <div className="font-bold text-lg">{slot.hora}</div>
+                    <div>
+                      <div className="font-bold text-sm text-gray-800">{grupo.nombre}</div>
+                      <div className="text-xs opacity-80">{grupo.profesor}</div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

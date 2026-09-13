@@ -18,13 +18,16 @@ class FactureroService {
   async login() {
     if (!this.config) await this.loadConfig();
     
-    const username = this.config?.facturero_user || import.meta.env.VITE_FACTURERO_USER;
-    const password = this.config?.facturero_password || import.meta.env.VITE_FACTURERO_PASSWORD;
+    // Las credenciales de Facturero Móvil deben estar en la tabla config_club
+    // (campo facturero_user y facturero_password). NO usar variables VITE_* 
+    // en el frontend ya que esas quedarían expuestas en el bundle del navegador.
+    const username = this.config?.facturero_user;
+    const password = this.config?.facturero_password;
     const ambiente = this.config?.facturero_ambiente || 'pruebas';
     const baseUrl = ambiente === 'produccion' ? 'https://app.factureromovil.com/api' : 'https://apptest.factureromovil.com/api';
 
     if (!username || !password) {
-      throw new Error('Faltan credenciales de Facturero Móvil en la Configuración del Club');
+      throw new Error('Faltan credenciales de Facturero Móvil en la Configuración del Club (Ajustes → Configuración de Facturación)');
     }
 
     const response = await fetch(`${baseUrl}/login_check`, {
@@ -99,9 +102,10 @@ class FactureroService {
     if (!this.config) await this.loadConfig();
     const hoy = new Date().toISOString().split('T')[0];
     
+    // Los IDs de producto también deben venir de config_club, no de variables de entorno.
     const productoId = tipoProducto === 'matricula' 
-      ? (this.config?.facturero_producto_matricula_id || import.meta.env.VITE_FACTURERO_PRODUCTO_MATRICULA_ID || "1") 
-      : (this.config?.facturero_producto_pension_id || import.meta.env.VITE_FACTURERO_PRODUCTO_PENSION_ID || "2");
+      ? (this.config?.facturero_producto_matricula_id || '1')
+      : (this.config?.facturero_producto_pension_id || '2');
     
     const payload = {
       fechaEmision: hoy,

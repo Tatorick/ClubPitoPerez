@@ -50,6 +50,24 @@ function validarEmail(email) {
   return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim());
 }
 
+// ── Sanitización ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Elimina caracteres HTML especiales de cadenas de texto libre.
+ * React ya escapa en el render, pero esta capa protege datos usados
+ * fuera de React (emails, PDFs de factura, exports, etc.).
+ * NO afecta números, fechas ni enums — solo campos de texto libre.
+ */
+function sanitizeText(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/`/g, '&#x60;');
+}
+
 // ── PhotoUploader ──────────────────────────────────────────────────────────────
 function PhotoUploader({ value, onChange }) {
   const fileRef   = useRef(null);
@@ -151,6 +169,7 @@ export default function Registro() {
     nombresMadre: '', cedulaMadre: '', telefonoMadre: '', ocupacionMadre: '',
     esRepresentante: 'Madre',
     // Paso 4
+    sinFactura: false, // true = omitir datos de facturación
     rucFacturacion: '', nombreFacturacion: '', direccionFacturacion: '',
     telefonoFacturacion: '', correoFacturacion: '',
     // Paso 5
@@ -217,6 +236,8 @@ export default function Registro() {
       }
     }
     if (s === 4) {
+      // Si el representante marcó "No necesito factura", omitir todas las validaciones del paso
+      if (formData.sinFactura) return {};
       if (!validarRucOCedula(formData.rucFacturacion))
         errs.rucFacturacion = 'Ingresa una cédula (10 dígitos) o RUC (13 dígitos) válido';
       if (!validarCelularEC(formData.telefonoFacturacion))
@@ -281,56 +302,56 @@ export default function Registro() {
 
       const { error: insertError } = await supabase.from('fichas').insert({
         user_id: userId, foto_url: fotoUrl,
-        nombres_jugador: nombreCompletoJugador, cedula_jugador: formData.cedulaJugador.trim(),
+        nombres_jugador: sanitizeText(nombreCompletoJugador), cedula_jugador: formData.cedulaJugador.trim(),
         fecha_nacimiento: formData.fechaNacimientoJugador, genero: formData.genero,
-        nacionalidad: formData.nacionalidad.trim(), direccion: formData.direccion.trim(),
-        discapacidad: formData.discapacidad, tipo_discapacidad: formData.tipoDiscapacidad || null,
+        nacionalidad: sanitizeText(formData.nacionalidad.trim()), direccion: sanitizeText(formData.direccion.trim()),
+        discapacidad: formData.discapacidad, tipo_discapacidad: sanitizeText(formData.tipoDiscapacidad) || null,
         porcentaje_discapacidad: formData.porcentajeDiscapacidad ? parseInt(formData.porcentajeDiscapacidad, 10) : null,
         nee: formData.nee, usa_lentes: formData.usaLentes,
-        nombres_padre: formData.nombresPadre || null, cedula_padre: formData.cedulaPadre || null,
-        telefono_padre: formData.telefonoPadre || null, ocupacion_padre: formData.ocupacionPadre || null,
-        nombres_madre: formData.nombresMadre || null, cedula_madre: formData.cedulaMadre || null,
-        telefono_madre: formData.telefonoMadre || null, ocupacion_madre: formData.ocupacionMadre || null,
+        nombres_padre: sanitizeText(formData.nombresPadre) || null, cedula_padre: formData.cedulaPadre || null,
+        telefono_padre: formData.telefonoPadre || null, ocupacion_padre: sanitizeText(formData.ocupacionPadre) || null,
+        nombres_madre: sanitizeText(formData.nombresMadre) || null, cedula_madre: formData.cedulaMadre || null,
+        telefono_madre: formData.telefonoMadre || null, ocupacion_madre: sanitizeText(formData.ocupacionMadre) || null,
         representante: formData.esRepresentante,
-        ruc_facturacion: formData.rucFacturacion.trim(), nombre_facturacion: formData.nombreFacturacion.trim(),
-        telefono_facturacion: formData.telefonoFacturacion.trim(), direccion_facturacion: formData.direccionFacturacion.trim(),
+        ruc_facturacion: formData.rucFacturacion.trim(), nombre_facturacion: sanitizeText(formData.nombreFacturacion.trim()),
+        telefono_facturacion: formData.telefonoFacturacion.trim(), direccion_facturacion: sanitizeText(formData.direccionFacturacion.trim()),
         correo_facturacion: formData.correoFacturacion.trim(),
         autoriza_imagen: formData.autorizaImagen === 'SI',
-        firma_representante: formData.firmaRepresentante.trim(), fecha_autorizacion: new Date().toISOString(),
+        firma_representante: sanitizeText(formData.firmaRepresentante.trim()), fecha_autorizacion: new Date().toISOString(),
       });
       if (insertError) throw new Error(`Error al guardar la ficha: ${insertError.message}`);
 
       // Insertar automáticamente en la tabla miembros para que aparezca en el Admin
       const { error: miembroError } = await supabase.from('miembros').insert({
-        nombres: nombreCompletoJugador,
+        nombres: sanitizeText(nombreCompletoJugador),
         cedula: formData.cedulaJugador.trim(),
         fecha_nacimiento: formData.fechaNacimientoJugador,
         genero: formData.genero,
-        nacionalidad: formData.nacionalidad.trim(),
-        direccion: formData.direccion.trim(),
+        nacionalidad: sanitizeText(formData.nacionalidad.trim()),
+        direccion: sanitizeText(formData.direccion.trim()),
         categoria: 'U14', // Por defecto, el admin puede ajustarlo luego
         tiene_beca: false,
         monto_pension: 55,
         tiene_discapacidad: formData.discapacidad === 'SI',
-        tipo_discapacidad: formData.tipoDiscapacidad || '',
+        tipo_discapacidad: sanitizeText(formData.tipoDiscapacidad) || '',
         porcentaje_discapacidad: formData.porcentajeDiscapacidad ? parseInt(formData.porcentajeDiscapacidad, 10) : null,
         necesidades_especiales: formData.nee === 'SI',
         usa_lentes: formData.usaLentes === 'SI',
-        padre_nombres: formData.nombresPadre || '',
+        padre_nombres: sanitizeText(formData.nombresPadre) || '',
         padre_cedula: formData.cedulaPadre || '',
         padre_telefono: formData.telefonoPadre || '',
-        padre_ocupacion: formData.ocupacionPadre || '',
-        madre_nombres: formData.nombresMadre || '',
+        padre_ocupacion: sanitizeText(formData.ocupacionPadre) || '',
+        madre_nombres: sanitizeText(formData.nombresMadre) || '',
         madre_cedula: formData.cedulaMadre || '',
         madre_telefono: formData.telefonoMadre || '',
-        madre_ocupacion: formData.ocupacionMadre || '',
+        madre_ocupacion: sanitizeText(formData.ocupacionMadre) || '',
         representante_legal: formData.esRepresentante,
         facturacion_ruc: formData.rucFacturacion.trim(),
-        facturacion_nombre: formData.nombreFacturacion.trim(),
-        facturacion_direccion: formData.direccionFacturacion.trim(),
+        facturacion_nombre: sanitizeText(formData.nombreFacturacion.trim()),
+        facturacion_direccion: sanitizeText(formData.direccionFacturacion.trim()),
         facturacion_telefono: formData.telefonoFacturacion.trim(),
         facturacion_correo: formData.correoFacturacion.trim(),
-        foto_url: fotoUrl
+        foto_url: fotoUrl,
       });
       
       if (miembroError) console.warn('Advertencia: no se pudo crear el miembro.', miembroError.message);
@@ -604,35 +625,68 @@ export default function Registro() {
             {/* ════ PASO 4: FACTURACIÓN ════ */}
             {step === 4 && (
               <div className="animate-[fadeIn_0.3s_ease-in-out]">
-                <h3 className="text-xl font-bold text-gray-800 border-b border-gray-200 pb-3 mb-2">Paso 4: Datos para Facturación</h3>
-                <p className="text-sm text-gray-500 mb-6">Estos datos aparecerán en los comprobantes y facturas de pago del club.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Cédula o RUC" error={fieldErrors.rucFacturacion} required>
-                    <input type="text" name="rucFacturacion" value={formData.rucFacturacion} onChange={handleChange}
-                      placeholder="Cédula (10 dígitos) o RUC (13 dígitos)" maxLength={13} className={ic('rucFacturacion')} />
-                    <p className="text-xs text-gray-400 mt-1">Se verifica el dígito del Registro Civil / SRI</p>
-                  </Field>
-                  <Field label="Teléfono de Contacto" error={fieldErrors.telefonoFacturacion} required>
-                    <input type="tel" name="telefonoFacturacion" value={formData.telefonoFacturacion} onChange={handleChange}
-                      placeholder="09XXXXXXXX" maxLength={10} className={ic('telefonoFacturacion')} />
-                  </Field>
-                  <div className="md:col-span-2">
-                    <Field label="Razón Social / Nombre Completo" error={fieldErrors.nombreFacturacion} required>
-                      <input type="text" name="nombreFacturacion" value={formData.nombreFacturacion} onChange={handleChange} className={ic('nombreFacturacion')} />
-                    </Field>
+                <h3 className="text-xl font-bold text-gray-800 border-b border-gray-200 pb-3 mb-4">Paso 4: Datos para Facturación</h3>
+
+                {/* Toggle: sin factura */}
+                <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer mb-6 transition-colors"
+                  style={{ borderColor: formData.sinFactura ? '#f97316' : '#e5e7eb', background: formData.sinFactura ? '#fff7ed' : '#f9fafb' }}>
+                  <input
+                    type="checkbox"
+                    name="sinFactura"
+                    checked={formData.sinFactura}
+                    onChange={handleChange}
+                    className="mt-0.5 w-5 h-5 accent-orange-500 shrink-0 cursor-pointer"
+                    id="sinFactura"
+                  />
+                  <div>
+                    <p className="font-bold text-gray-800 text-sm leading-snug">No necesito factura electrónica</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Marca esta opción si no requieres comprobante de pago electrónico. Podrás solicitarlo más adelante en tu perfil.
+                    </p>
                   </div>
-                  <div className="md:col-span-2">
-                    <Field label="Dirección de Facturación" error={fieldErrors.direccionFacturacion} required>
-                      <input type="text" name="direccionFacturacion" value={formData.direccionFacturacion} onChange={handleChange} className={ic('direccionFacturacion')} />
-                    </Field>
+                </label>
+
+                {/* Campos de facturación — visibles solo si NO marcó sinFactura */}
+                {!formData.sinFactura && (
+                  <>
+                    <p className="text-sm text-gray-500 mb-4">Estos datos aparecerán en los comprobantes y facturas de pago del club.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Field label="Cédula o RUC" error={fieldErrors.rucFacturacion} required>
+                        <input type="text" name="rucFacturacion" value={formData.rucFacturacion} onChange={handleChange}
+                          placeholder="Cédula (10 dígitos) o RUC (13 dígitos)" maxLength={13} className={ic('rucFacturacion')} />
+                        <p className="text-xs text-gray-400 mt-1">Se verifica el dígito del Registro Civil / SRI</p>
+                      </Field>
+                      <Field label="Teléfono de Contacto" error={fieldErrors.telefonoFacturacion} required>
+                        <input type="tel" name="telefonoFacturacion" value={formData.telefonoFacturacion} onChange={handleChange}
+                          placeholder="09XXXXXXXX" maxLength={10} className={ic('telefonoFacturacion')} />
+                      </Field>
+                      <div className="md:col-span-2">
+                        <Field label="Razón Social / Nombre Completo" error={fieldErrors.nombreFacturacion} required>
+                          <input type="text" name="nombreFacturacion" value={formData.nombreFacturacion} onChange={handleChange} className={ic('nombreFacturacion')} />
+                        </Field>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Field label="Dirección de Facturación" error={fieldErrors.direccionFacturacion} required>
+                          <input type="text" name="direccionFacturacion" value={formData.direccionFacturacion} onChange={handleChange} className={ic('direccionFacturacion')} />
+                        </Field>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Field label="Correo para envío de facturas" error={fieldErrors.correoFacturacion} required>
+                          <input type="email" name="correoFacturacion" value={formData.correoFacturacion} onChange={handleChange}
+                            placeholder="facturacion@correo.com" className={ic('correoFacturacion')} />
+                        </Field>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Mensaje informativo si eligió sin factura */}
+                {formData.sinFactura && (
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-orange-50 border border-orange-200 text-orange-800 text-sm">
+                    <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5">info</span>
+                    <p>Continuarás sin datos de facturación. Si en el futuro necesitas factura, puedes completar estos datos desde tu perfil o solicitarlos directamente en la secretaría del club.</p>
                   </div>
-                  <div className="md:col-span-2">
-                    <Field label="Correo para envío de facturas" error={fieldErrors.correoFacturacion} required>
-                      <input type="email" name="correoFacturacion" value={formData.correoFacturacion} onChange={handleChange}
-                        placeholder="facturacion@correo.com" className={ic('correoFacturacion')} />
-                    </Field>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 

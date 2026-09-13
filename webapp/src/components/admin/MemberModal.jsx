@@ -452,9 +452,16 @@ function PagosTab({ member, onUpdateMember }) {
           // ── Emitir factura electrónica si el admin lo solicitó ──────────────
           if (emitirFactura) {
             try {
+              // Obtener el token JWT del administrador para autenticar la llamada
+              const { data: { session } } = await supabase.auth.getSession();
+              const authToken = session?.access_token || '';
+
               const res = await fetch('/api/emitir-factura', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${authToken}`,
+                },
                 body: JSON.stringify({
                   transaccion_id: dbTxn.id,
                   miembro_id: member.id,
@@ -491,9 +498,16 @@ function PagosTab({ member, onUpdateMember }) {
   const handleReintentarFactura = async (txn) => {
     if (!member.id || !txn.id) return;
     try {
+      // Obtener el token JWT del administrador para autenticar la llamada
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || '';
+
       const res = await fetch('/api/emitir-factura', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ transaccion_id: txn.id, miembro_id: member.id }),
       });
       const data = await res.json();

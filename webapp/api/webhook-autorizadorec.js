@@ -18,6 +18,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { checkRateLimit, getClientIp } from './_rateLimit.js';
 
 // ── Cliente Supabase con service role ────────────────────────────────────────
 function getSupabaseAdmin() {
@@ -71,6 +72,15 @@ export default async function handler(req, res) {
   // Solo POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido.' });
+  }
+
+  // ── Rate Limiting: máximo 30 peticiones por IP por minuto ─────────────────
+  // (límite más alto que emitir-factura porque AutorizadorEC puede reintentar rápido)
+  const clientIp = getClientIp(req);
+  const rateCheck = checkRateLimit(clientIp, 30);
+  if (!rateCheck.allowed) {
+    res.setHeader('Retry-After', Math.ceil(rateCheck.resetInMs / 1000));
+    return res.status(429).json({ error: 'Rate limit superado.' });
   }
 
   // ── Leer el body raw para validar la firma ────────────────────────────────

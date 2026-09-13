@@ -132,7 +132,8 @@ export const ENTRENADORES_PREDETERMINADOS = [
   'Prof. Pito Perez',
   'Prof. Kevin Culcay',
   'Prof. Collen Cuninhan',
-  'Prof. Marcos Pérez'
+  'Prof. Marcos Pérez',
+  'Prof. Entrenador(a)', // Pendiente de confirmación — actualizar cuando esté disponible
 ];
 
 export const HORARIOS_PREDETERMINADOS = [...LISTA_GRUPOS];

@@ -11,9 +11,11 @@
  *                                  https://api.autorizadorec.com     (producción)
  *   SUPABASE_URL                 → URL de tu proyecto Supabase
  *   SUPABASE_SERVICE_ROLE_KEY    → Clave secreta de servicio (NO la anon key)
+ *   SUPABASE_ANON_KEY            → Clave pública (para verificar JWT del usuario)
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIp } from './_rateLimit.js';
 
 // ── Cliente Supabase con service role (acceso total, solo en servidor) ──────────
 function getSupabaseAdmin() {
@@ -21,6 +23,12 @@ function getSupabaseAdmin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Faltan variables de entorno de Supabase en el servidor.');
   return createClient(url, key);
+}
+
+// ── Regex UUID v4 ────────────────────────────────────────────────────────────
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isValidUUID(val) {
+  return typeof val === 'string' && UUID_REGEX.test(val);
 }
 
 // ── Construye el tipo de identificación del comprador según SRI ──────────────
@@ -135,6 +143,36 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método no permitido.' });
   }
 
+  // ── Rate Limiting: máximo 10 peticiones por IP por minuto ─────────────────
+  const clientIp = getClientIp(req);
+  const rateCheck = checkRateLimit(clientIp, 10);
+  if (!rateCheck.allowed) {
+    res.setHeader('Retry-After', Math.ceil(rateCheck.resetInMs / 1000));
+    return res.status(429).json({
+      error: 'Demasiadas peticiones. Espera un momento antes de reintentar.',
+      retryAfterSeconds: Math.ceil(rateCheck.resetInMs / 1000),
+    });
+  }
+
+  // ── Verificación de JWT: solo usuarios autenticados de Supabase ───────────
+  // El frontend debe enviar el token en: Authorization: Bearer <access_token>
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'No autorizado. Se requiere sesión activa.' });
+  }
+
+  // Verificamos el token con un cliente Supabase usando la anon key
+  const supabaseAuth = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+  );
+  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+  if (authError || !user) {
+    return res.status(401).json({ error: 'Token inválido o expirado. Inicia sesión nuevamente.' });
+  }
+
   const supabase = getSupabaseAdmin();
 
   try {
@@ -143,6 +181,11 @@ export default async function handler(req, res) {
     // ── Validaciones básicas de entrada ────────────────────────────────────────
     if (!transaccion_id || !miembro_id) {
       return res.status(400).json({ error: 'Faltan parámetros: transaccion_id y miembro_id son requeridos.' });
+    }
+
+    // ── Validar formato UUID para prevenir inyecciones ────────────────────────
+    if (!isValidUUID(transaccion_id) || !isValidUUID(miembro_id)) {
+      return res.status(400).json({ error: 'Los parámetros transaccion_id y miembro_id deben ser UUIDs válidos.' });
     }
 
     // ── Leer transacción ──────────────────────────────────────────────────────

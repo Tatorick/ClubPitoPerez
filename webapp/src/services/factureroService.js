@@ -170,70 +170,55 @@ class FactureroService {
 
   /**
    * Construye el desglose de ítems para Facturero Móvil.
-   * Resuelve automáticamente los IDs reales de los productos.
+   * Se asegura de que la suma de los ítems sea EXACTAMENTE igual al monto_real de la transacción.
    */
   async construirDetallesFactura(transaccion, miembro, config = this.config) {
     const mesesCubiertos = transaccion?.meses_cubiertos || [];
     const precioMatricula = Number(config?.precio_matricula || 25.00);
-    const precioPension   = Number(config?.precio_pension   || 55.00);
+    const montoReal = Number(transaccion?.monto_real || 0);
 
     const tieneMatricula = mesesCubiertos.includes('MAT');
     const mesesPension   = mesesCubiertos.filter(m => m !== 'MAT');
 
     const detalles = [];
+    let restante = montoReal;
 
-    // 1. Matrícula — sin descuento
+    // 1. Matrícula — siempre cobra su valor (o lo que quede)
     if (tieneMatricula) {
-      const idMatricula = await this.resolverProductoId(
-        'matricula',
-        config?.facturero_producto_matricula_id
-      );
+      const idMatricula = await this.resolverProductoId('matricula', config?.facturero_producto_matricula_id);
+      const valorMatricula = restante >= precioMatricula ? precioMatricula : restante;
+      
+      if (valorMatricula > 0) {
+        detalles.push({
+          producto: idMatricula,
+          cantidad: 1.00,
+          precioUnitario: valorMatricula,
+          descuento: 0.00,
+        });
+        restante = Number((restante - valorMatricula).toFixed(2));
+      }
+    }
+
+    // 2. Pensión — el resto del dinero pagado va a la pensión
+    if (mesesPension.length > 0 && restante > 0) {
+      const idPension = await this.resolverProductoId('pension', config?.facturero_producto_pension_id);
+      
       detalles.push({
-        producto: idMatricula,
-        cantidad: 1.00,
-        precioUnitario: precioMatricula,
+        producto: idPension,
+        cantidad: 1.00, // Mandamos cantidad 1 para evitar errores de redondeo de centavos
+        precioUnitario: restante,
         descuento: 0.00,
       });
+      restante = 0;
     }
 
-    // 2. Pensión — con descuento si aplica
-    if (mesesPension.length > 0) {
-      const idPension = await this.resolverProductoId(
-        'pension',
-        config?.facturero_producto_pension_id
-      );
-
-      const descuentoPorcentaje = Number(miembro?.descuento_porcentaje || 0);
-      let descuentoUnitario = 0;
-
-      if (descuentoPorcentaje > 0) {
-        descuentoUnitario = Number(((precioPension * descuentoPorcentaje) / 100).toFixed(2));
-      } else if (miembro?.monto_pension && Number(miembro.monto_pension) < precioPension) {
-        descuentoUnitario = Number((precioPension - Number(miembro.monto_pension)).toFixed(2));
-      }
-
-      const cantidad       = mesesPension.length;
-      const descuentoTotal = Number((descuentoUnitario * cantidad).toFixed(2));
-
-      detalles.push({
-        producto: idPension,
-        cantidad: Number(cantidad.toFixed(2)),
-        precioUnitario: precioPension,
-        descuento: descuentoTotal,
-      });
-    }
-
-    // Fallback: si no hay meses_cubiertos especificados
-    if (detalles.length === 0) {
-      const idPension = await this.resolverProductoId(
-        'pension',
-        config?.facturero_producto_pension_id
-      );
-      const monto = Number(transaccion?.monto_real || precioPension);
+    // Fallback por si no hubo meses especificados
+    if (detalles.length === 0 && restante > 0) {
+      const idPension = await this.resolverProductoId('pension', config?.facturero_producto_pension_id);
       detalles.push({
         producto: idPension,
         cantidad: 1.00,
-        precioUnitario: monto,
+        precioUnitario: restante,
         descuento: 0.00,
       });
     }

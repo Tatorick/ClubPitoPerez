@@ -35,24 +35,24 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No autorizado. Se requiere sesión activa.' });
     }
 
-    // Verificar que el token sea válido
-    const supabaseUrl  = process.env.SUPABASE_URL;
-    const supabaseAnon = process.env.SUPABASE_ANON_KEY;
-    const supabaseSvc  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Solo necesitamos SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY
+    // (el cliente con service role puede verificar JWTs también)
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseSvc = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseAnon || !supabaseSvc) {
-      console.error('[facturero-proxy] Faltan variables de entorno de Supabase');
+    if (!supabaseUrl || !supabaseSvc) {
+      console.error('[facturero-proxy] Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY');
       return res.status(500).json({
         error: 'Configuración del servidor incompleta.',
-        detail: 'Faltan variables de entorno de Supabase en Vercel.',
+        detail: 'Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en Vercel.',
       });
     }
 
-    // Auth check con manejo seguro de errores
+    // Auth check usando service role (no necesita anon key)
     let authUser = null;
     try {
-      const supabaseAuth = createClient(supabaseUrl, supabaseAnon);
-      const authResult = await supabaseAuth.auth.getUser(supabaseToken);
+      const supabaseAdmin = createClient(supabaseUrl, supabaseSvc);
+      const authResult = await supabaseAdmin.auth.getUser(supabaseToken);
       authUser = authResult?.data?.user || null;
       if (authResult?.error) {
         console.warn('[facturero-proxy] Auth error:', authResult.error.message);

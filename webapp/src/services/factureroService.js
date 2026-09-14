@@ -3,13 +3,13 @@ import { supabase } from './../lib/supabase';
 /**
  * Servicio para interactuar con Facturero Móvil a través del proxy serverless.
  *
- * IMPORTANTE: Las llamadas directas al browser → app.factureromovil.com
- * son bloqueadas por CORS. Por eso todas las peticiones van a través de
- * /api/facturero-proxy (Vercel Serverless), que actúa de intermediario.
+ * Las credenciales de Facturero Móvil están almacenadas como variables de entorno
+ * en Vercel (FACTURERO_USER, FACTURERO_PASSWORD, FACTURERO_AMBIENTE).
+ * El proxy maneja el login internamente — el frontend nunca ve las credenciales.
  */
 class FactureroService {
   constructor() {
-    this.token = null;    // JWT de Facturero Móvil (no de Supabase)
+    this.fmToken = null; // JWT de Facturero Móvil (cacheado en memoria)
     this.config = null;
   }
 
@@ -20,69 +20,49 @@ class FactureroService {
   }
 
   /**
-   * Obtiene el JWT de Supabase del usuario actual para autenticar el proxy.
-   */
-  async getSupabaseToken() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      throw new Error('No hay sesión activa. Por favor inicia sesión.');
-    }
-    return session.access_token;
-  }
-
-  /**
-   * Llama al proxy serverless en lugar de llamar directamente a Facturero Móvil.
-   * Esto evita el bloqueo CORS del navegador.
+   * Llama al proxy serverless /api/facturero-proxy.
+   * El proxy maneja autenticación con Facturero Móvil internamente.
    */
   async callProxy({ path, method = 'GET', body, token }) {
-    const supabaseToken = await this.getSupabaseToken();
-
     const res = await fetch('/api/facturero-proxy', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseToken}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path, method, body, token }),
     });
-
     return res;
   }
 
+  /**
+   * Obtiene (o renueva) el JWT de Facturero Móvil.
+   * El proxy hace el login con las credenciales de env vars.
+   */
   async login() {
-    if (!this.config) await this.loadConfig();
-
-    const username = this.config?.facturero_user;
-    const password = this.config?.facturero_password;
-
-    if (!username || !password) {
-      throw new Error('Faltan credenciales de Facturero Móvil en la Configuración del Club (Ajustes → Configuración de Facturación)');
-    }
-
-    // Login a través del proxy (evita CORS)
     const response = await this.callProxy({
       path: '/login_check',
       method: 'POST',
-      body: { _username: username, _password: password },
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || `Error al autenticar con Facturero Móvil (${response.status})`);
+      throw new Error(err?.error || err?.message || `Error al autenticar con Facturero Móvil (${response.status})`);
     }
 
     const data = await response.json();
-    this.token = data.token;
-    return this.token;
+    this.fmToken = data.token;
+    return this.fmToken;
   }
 
   async fetchWithAuth(path, options = {}) {
-    // Primera petición autenticada
+    // Parsear body si viene como string (para mantener compatibilidad)
+    const bodyData = typeof options.body === 'string'
+      ? JSON.parse(options.body)
+      : options.body;
+
     const response = await this.callProxy({
       path,
       method: options.method || 'GET',
-      body: options.body ? JSON.parse(options.body) : undefined,
-      token: this.token,
+      body: bodyData,
+      token: this.fmToken,
     });
 
     if (response.status === 401) {
@@ -91,8 +71,8 @@ class FactureroService {
       return this.callProxy({
         path,
         method: options.method || 'GET',
-        body: options.body ? JSON.parse(options.body) : undefined,
-        token: this.token,
+        body: bodyData,
+        token: this.fmToken,
       });
     }
 
@@ -106,12 +86,12 @@ class FactureroService {
       razonSocial: cliente.nombre || 'Consumidor Final',
       direccion: cliente.direccion || 'Quito',
       telefonos: cliente.telefono || '0999999999',
-      email: cliente.email || 'correo@ejemplo.com'
+      email: cliente.email || 'correo@ejemplo.com',
     };
 
     const response = await this.fetchWithAuth('/clientes', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
@@ -147,7 +127,7 @@ class FactureroService {
         producto: prodMatriculaId.toString(),
         cantidad: 1.00,
         precioUnitario: precioMatricula,
-        descuento: 0.00
+        descuento: 0.00,
       });
     }
 
@@ -159,7 +139,6 @@ class FactureroService {
       if (descuentoPorcentaje > 0) {
         descuentoUnitario = Number(((precioPension * descuentoPorcentaje) / 100).toFixed(2));
       } else if (miembro?.monto_pension && Number(miembro.monto_pension) < precioPension) {
-        // Para deportistas con pensión fija reducida (ej: $25 en lugar de $55)
         descuentoUnitario = Number((precioPension - Number(miembro.monto_pension)).toFixed(2));
       }
 
@@ -170,18 +149,18 @@ class FactureroService {
         producto: prodPensionId.toString(),
         cantidad: Number(cantidad.toFixed(2)),
         precioUnitario: precioPension,
-        descuento: descuentoTotal
+        descuento: descuentoTotal,
       });
     }
 
-    // Caso de respaldo: Si la transacción no tiene meses_cubiertos especificados
+    // Caso de respaldo
     if (detalles.length === 0) {
       const monto = Number(transaccion?.monto_real || precioPension);
       detalles.push({
         producto: prodPensionId.toString(),
         cantidad: 1.00,
         precioUnitario: monto,
-        descuento: 0.00
+        descuento: 0.00,
       });
     }
 
@@ -206,51 +185,42 @@ class FactureroService {
         const descuento = parseFloat(item.descuento || 0);
         const subtotal = (cantidad * precioUnitario) - descuento;
         totalFactura += subtotal > 0 ? subtotal : 0;
-
         return {
           producto: (item.producto || item.productoId || '1').toString(),
-          cantidad: cantidad,
-          precioUnitario: precioUnitario,
-          descuento: descuento
+          cantidad,
+          precioUnitario,
+          descuento,
         };
       });
     } else {
-      // Retrocompatibilidad con llamadas legacy: emitirFactura(clienteId, monto, tipoProducto)
       const productoId = tipoProducto === 'matricula'
         ? (this.config?.facturero_producto_matricula_id || '1')
         : (this.config?.facturero_producto_pension_id || '2');
-
       const monto = parseFloat(itemsOrMonto || 0);
       totalFactura = monto;
-      detallesFactura = [
-        {
-          producto: productoId.toString(),
-          cantidad: 1.00,
-          precioUnitario: monto,
-          descuento: 0
-        }
-      ];
+      detallesFactura = [{
+        producto: productoId.toString(),
+        cantidad: 1.00,
+        precioUnitario: monto,
+        descuento: 0,
+      }];
     }
 
     const payload = {
       fechaEmision: hoy,
       cliente: clienteId,
-      infoFactura: {
-        detallesFactura
-      },
-      pagos: [
-        {
-          formaPagoSri: 20,
-          total: totalFactura.toFixed(2),
-          plazo: 1,
-          unidadTiempo: "Dias"
-        }
-      ]
+      infoFactura: { detallesFactura },
+      pagos: [{
+        formaPagoSri: 20,
+        total: totalFactura.toFixed(2),
+        plazo: 1,
+        unidadTiempo: 'Dias',
+      }],
     };
 
     const response = await this.fetchWithAuth('/documentos/facturas', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -263,35 +233,29 @@ class FactureroService {
 
   /**
    * Método de alto nivel para emitir la factura de una transacción:
-   * 1. Extrae los datos de facturación del representante/miembro
-   * 2. Crea u obtiene el cliente en Facturero Móvil
+   * 1. Login con Facturero Móvil (credenciales desde env vars del servidor)
+   * 2. Crea u obtiene el cliente
    * 3. Desglosa los productos (Matrícula sin descuento y Pensión con descuento)
    * 4. Emite la factura y actualiza la transacción en Supabase
    */
   async emitirFacturaTransaccion({ transaccion, miembro }) {
     if (!this.config) await this.loadConfig();
+
+    // Login con credenciales de env vars (el proxy lo maneja)
     await this.login();
 
-    // Extraer datos del comprador priorizando los datos de facturación de la ficha
-    const cedula = (miembro.facturacion_ruc || miembro.cedula || '9999999999999').trim();
-    const nombre = (miembro.facturacion_nombre || miembro.nombres || 'Consumidor Final').trim();
+    const cedula    = (miembro.facturacion_ruc || miembro.cedula || '9999999999999').trim();
+    const nombre    = (miembro.facturacion_nombre || miembro.nombres || 'Consumidor Final').trim();
     const direccion = (miembro.facturacion_direccion || this.config?.direccion_matriz || 'Quito').trim();
-    const telefono = (miembro.facturacion_telefono || miembro.madre_telefono || miembro.padre_telefono || '0999999999').trim();
-    const email = (miembro.facturacion_correo || this.config?.email_club || 'correo@ejemplo.com').trim();
+    const telefono  = (miembro.facturacion_telefono || miembro.madre_telefono || miembro.padre_telefono || '0999999999').trim();
+    const email     = (miembro.facturacion_correo || this.config?.email_club || 'correo@ejemplo.com').trim();
 
     let clienteId = null;
     try {
-      const resCliente = await this.crearCliente({
-        cedula,
-        nombre,
-        direccion,
-        telefono,
-        email
-      });
+      const resCliente = await this.crearCliente({ cedula, nombre, direccion, telefono, email });
       clienteId = resCliente?.id || resCliente?.cliente?.id || resCliente?.idCliente;
     } catch (clienteErr) {
-      console.warn('Nota al crear/buscar cliente en Facturero Móvil:', clienteErr.message);
-      // Si el cliente ya existía, intentamos obtener su ID
+      console.warn('Nota al crear/buscar cliente:', clienteErr.message);
       try {
         const searchRes = await this.fetchWithAuth(`/clientes?search=${encodeURIComponent(cedula)}`);
         if (searchRes.ok) {
@@ -305,42 +269,28 @@ class FactureroService {
       }
     }
 
-    if (!clienteId) {
-      clienteId = 43604; // Fallback por defecto si no se pudo determinar
-    }
+    if (!clienteId) clienteId = 43604;
 
-    // Desglosar ítems diferenciando Matrícula y Pensión con sus descuentos
     const detalles = this.construirDetallesFactura(transaccion, miembro, this.config);
-
-    // Emitir factura electrónica en Facturero Móvil
     const resFactura = await this.emitirFactura(clienteId, detalles);
 
     const numeroDoc = resFactura.numeroDocumento || resFactura.id || 'TBD';
-    const pdfUrl = resFactura.pdf || resFactura.urlPdf || '';
-    const xmlUrl = resFactura.xml || resFactura.urlXml || '';
+    const pdfUrl    = resFactura.pdf || resFactura.urlPdf || '';
+    const xmlUrl    = resFactura.xml || resFactura.urlXml || '';
 
-    // Actualizar transacción en Supabase
     const { error: dbErr } = await supabase
       .from('transacciones')
       .update({
-        factura_id: numeroDoc,
-        factura_pdf: pdfUrl,
-        factura_xml: xmlUrl,
-        estado_factura: 'autorizado'
+        factura_id:      numeroDoc,
+        factura_pdf:     pdfUrl,
+        factura_xml:     xmlUrl,
+        estado_factura:  'autorizado',
       })
       .eq('id', transaccion.id);
 
-    if (dbErr) {
-      console.error('Error actualizando transacción en Supabase:', dbErr);
-    }
+    if (dbErr) console.error('Error actualizando transacción:', dbErr);
 
-    return {
-      ...resFactura,
-      numeroDocumento: numeroDoc,
-      pdf: pdfUrl,
-      xml: xmlUrl,
-      detalles
-    };
+    return { ...resFactura, numeroDocumento: numeroDoc, pdf: pdfUrl, xml: xmlUrl, detalles };
   }
 }
 

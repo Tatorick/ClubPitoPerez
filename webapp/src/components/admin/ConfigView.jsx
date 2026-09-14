@@ -548,138 +548,67 @@ export default function ConfigView() {
               </div>
             </div>
 
-            {/* AutorizadorEC */}
+            {/* Integración Facturero Móvil — configuración interna */}
             <div className="border-t border-gray-100 pt-5">
               <h3 className="font-bold text-gray-800 mb-1 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px] text-gray-500">api</span>
                 Integración Facturero Móvil
-                {form.facturero_user && (
-                  <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    form.facturero_ambiente === 'produccion'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {form.facturero_ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
-                  </span>
-                )}
+                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                  Producción
+                </span>
               </h3>
-              <p className="text-xs text-gray-500 mb-4">Conecta con Facturero Móvil para emitir facturas electrónicas SRI.</p>
+              <p className="text-xs text-gray-500 mb-4">Emisión de facturas electrónicas SRI a través de Facturero Móvil.</p>
 
-              {form.facturero_ambiente === 'produccion' && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 border border-blue-300 text-blue-800 text-xs mb-4">
-                  <span className="material-symbols-outlined text-[16px] shrink-0">verified</span>
-                  <p><strong>Modo Producción activo.</strong> Las facturas emitidas serán documentos oficiales válidos ante el SRI.</p>
+              {/* Estado de conexión — estático, credenciales configuradas en servidor */}
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200 mb-5">
+                <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-green-600 text-[20px]">check_circle</span>
                 </div>
-              )}
-
-              {!form.facturero_user && (
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 text-xs mb-4">
-                  <span className="material-symbols-outlined text-[20px] text-gray-400 shrink-0">help</span>
-                  <div className="space-y-1">
-                    <p className="font-bold text-gray-800">¿No tienes credenciales de Facturero Móvil?</p>
-                    <ol className="list-decimal list-inside space-y-0.5 text-gray-600">
-                      <li>Contacta a <strong>Facturero Móvil</strong> para crear tu cuenta</li>
-                      <li>Pídeles tu <strong>Usuario API</strong> y <strong>Clave API</strong> (diferentes a las del portal web)</li>
-                      <li>Ingrésalas aquí abajo</li>
-                    </ol>
-                  </div>
+                <div>
+                  <p className="font-bold text-sm text-green-800">✅ Conectado con Facturero Móvil</p>
+                  <p className="text-xs text-green-700 mt-0.5">
+                    Integración activa en modo <strong>Producción</strong>. Las facturas emitidas son documentos oficiales válidos ante el SRI.
+                  </p>
                 </div>
-              )}
+              </div>
 
-              <div className="grid grid-cols-1 gap-4">
-                <ConfigField label="Ambiente">
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { val: 'pruebas', label: 'Pruebas', icon: 'science', desc: 'Facturas de prueba sin validez.' },
-                      { val: 'produccion', label: 'Producción', icon: 'verified', desc: 'Facturas reales SRI.' },
-                    ].map(opt => (
-                      <label key={opt.val}
-                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                          form.facturero_ambiente === opt.val
-                            ? opt.val === 'produccion' ? 'border-blue-500 bg-blue-50' : 'border-amber-400 bg-amber-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}>
-                        <input type="radio" name="facturero_ambiente" value={opt.val}
-                          checked={form.facturero_ambiente === opt.val}
-                          onChange={handleChange} className="mt-0.5" />
-                        <div>
-                          <p className="font-bold text-sm text-gray-800 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[16px]">{opt.icon}</span>
-                            {opt.label}
-                          </p>
-                          <p className="text-[11px] text-gray-500 mt-0.5">{opt.desc}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </ConfigField>
-
+              {/* IDs de productos — único dato editable aquí */}
+              <div>
+                <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">
+                  IDs de Productos en Facturero Móvil
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Obtén estos IDs desde tu cuenta de Facturero Móvil en <strong>Inventario → Productos</strong>.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ConfigField label="Usuario API Facturero Móvil"
-                    hint="Usuario proporcionado por Facturero Móvil para la API.">
-                    <input name="facturero_user"
-                      type="text"
-                      value={form.facturero_user} onChange={handleChange}
-                      placeholder="APITEST"
-                      className={inputCls} />
-                  </ConfigField>
-
-                  <ConfigField label="Clave API Facturero Móvil"
-                    hint="Contraseña de la API">
-                    <div className="relative">
-                      <input name="facturero_password"
-                        type={showApiKey ? 'text' : 'password'}
-                        value={form.facturero_password} onChange={handleChange}
-                        placeholder="123456"
-                        className={`${inputCls} pr-10`} />
-                      <button type="button" onClick={() => setShowApiKey(p => !p)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                        <span className="material-symbols-outlined text-[18px]">
-                          {showApiKey ? 'visibility_off' : 'visibility'}
-                        </span>
-                      </button>
-                    </div>
-                  </ConfigField>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ConfigField label="ID Producto Matrícula (001)"
-                    hint="ID numérico del producto en Facturero Móvil para la Matrícula.">
+                  <ConfigField label="ID Producto Matrícula"
+                    hint="ID numérico del producto para la Matrícula.">
                     <input name="facturero_producto_matricula_id"
                       type="text"
                       value={form.facturero_producto_matricula_id} onChange={handleChange}
-                      placeholder="1868"
+                      placeholder="Ej: 1868"
                       className={inputCls} />
                   </ConfigField>
 
-                  <ConfigField label="ID Producto Mensualidad (002)"
-                    hint="ID numérico del producto en Facturero Móvil para la Mensualidad.">
+                  <ConfigField label="ID Producto Mensualidad"
+                    hint="ID numérico del producto para la Mensualidad/Pensión.">
                     <input name="facturero_producto_pension_id"
                       type="text"
                       value={form.facturero_producto_pension_id} onChange={handleChange}
-                      placeholder="1869"
+                      placeholder="Ej: 1869"
                       className={inputCls} />
                   </ConfigField>
                 </div>
 
-                <div className="pt-1">
-                  <button type="button" onClick={handleTestApi} disabled={testingApi}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#001f3f] text-[#001f3f] text-sm font-semibold hover:bg-[#001f3f]/5 transition-colors disabled:opacity-50">
-                    {testingApi
-                      ? <><span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Probando conexión...</>
-                      : <><span className="material-symbols-outlined text-[16px]">network_check</span> Probar conexión con Facturero Móvil</>
-                    }
-                  </button>
-                  {testResult && (
-                    <p className={`mt-2 text-xs font-semibold ${testResult.ok ? 'text-green-700' : 'text-red-700'}`}>
-                      {testResult.message}
-                    </p>
-                  )}
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">info</span>
+                  <p>Si aún no tienes los productos creados en Facturero Móvil, créalos primero y luego regresa a ingresar sus IDs aquí.</p>
                 </div>
               </div>
             </div>
           </div>
         )}
+
 
         {/* ── TAB: DEPORTIVO ── */}
         {activeTab === 'deportivo' && (

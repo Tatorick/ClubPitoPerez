@@ -8,21 +8,15 @@
  *
  * Body esperado:
  *   {
- *     path:   string,   // ej: "/login_check", "/clientes", "/documentos/facturas"
- *     method: string,   // "GET" | "POST" | "PUT" | "DELETE"
- *     body:   object,   // payload a enviar (opcional)
- *     token:  string,   // JWT de Facturero Móvil (opcional, solo para rutas autenticadas)
+ *     path:      string,   // ej: "/login_check", "/clientes", "/documentos/facturas"
+ *     method:    string,   // "GET" | "POST" | "PUT" | "DELETE"
+ *     body:      object,   // payload a enviar (opcional)
+ *     token:     string,   // JWT de Facturero Móvil (opcional, rutas autenticadas)
+ *     ambiente:  string,   // "produccion" | "pruebas" (opcional, prioridad sobre BD)
  *   }
  */
 
 import { createClient } from '@supabase/supabase-js';
-
-function getSupabaseAdmin() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Faltan variables de entorno de Supabase.');
-  return createClient(url, key);
-}
 
 export default async function handler(req, res) {
   // Solo POST
@@ -30,88 +24,135 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método no permitido.' });
   }
 
-  // ── Verificar JWT de Supabase (solo admins autenticados) ──────────────────
-  const authHeader = req.headers['authorization'] || '';
-  const supabaseToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  if (!supabaseToken) {
-    return res.status(401).json({ error: 'No autorizado. Se requiere sesión activa.' });
-  }
-
-  const supabaseAuth = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
-  );
-  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(supabaseToken);
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Token inválido o expirado.' });
-  }
-
-  const supabase = getSupabaseAdmin();
-
+  // ── Todo dentro de un try-catch global para evitar 500 sin formato ────────
   try {
+
+    // ── Verificar JWT de Supabase (solo admins autenticados) ─────────────────
+    const authHeader = req.headers['authorization'] || '';
+    const supabaseToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+    if (!supabaseToken) {
+      return res.status(401).json({ error: 'No autorizado. Se requiere sesión activa.' });
+    }
+
+    // Verificar que el token sea válido
+    const supabaseUrl  = process.env.SUPABASE_URL;
+    const supabaseAnon = process.env.SUPABASE_ANON_KEY;
+    const supabaseSvc  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseAnon || !supabaseSvc) {
+      console.error('[facturero-proxy] Faltan variables de entorno de Supabase');
+      return res.status(500).json({
+        error: 'Configuración del servidor incompleta.',
+        detail: 'Faltan variables de entorno de Supabase en Vercel.',
+      });
+    }
+
+    // Auth check con manejo seguro de errores
+    let authUser = null;
+    try {
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnon);
+      const authResult = await supabaseAuth.auth.getUser(supabaseToken);
+      authUser = authResult?.data?.user || null;
+      if (authResult?.error) {
+        console.warn('[facturero-proxy] Auth error:', authResult.error.message);
+      }
+    } catch (authErr) {
+      console.error('[facturero-proxy] Error verificando token:', authErr);
+      return res.status(401).json({ error: 'Error verificando sesión.', detail: authErr.message });
+    }
+
+    if (!authUser) {
+      return res.status(401).json({ error: 'Token inválido o expirado. Inicia sesión nuevamente.' });
+    }
+
+    // ── Leer y validar el body del request ───────────────────────────────────
     const { path, method = 'GET', body, token, ambiente: ambienteParam } = req.body || {};
 
     if (!path) {
       return res.status(400).json({ error: 'Falta el parámetro "path".' });
     }
 
-    // ── Determinar el ambiente: usar el que viene en el request o leer de la BD ─────
-    // Prioridad: 1º el que manda el frontend (para el test), 2º el de config_club
+    // ── Determinar ambiente y URL base ────────────────────────────────────────
+    // Prioridad: 1º el que viene en el request (para el test de conexión)
+    //            2º el guardado en config_club
     let ambiente = ambienteParam;
     if (!ambiente) {
-      const { data: config } = await supabase
-        .from('config_club')
-        .select('facturero_ambiente')
-        .maybeSingle();
-      ambiente = config?.facturero_ambiente || 'pruebas';
+      try {
+        const supabaseAdmin = createClient(supabaseUrl, supabaseSvc);
+        const { data: config } = await supabaseAdmin
+          .from('config_club')
+          .select('facturero_ambiente')
+          .maybeSingle();
+        ambiente = config?.facturero_ambiente || 'pruebas';
+      } catch (dbErr) {
+        console.warn('[facturero-proxy] No se pudo leer config_club:', dbErr.message);
+        ambiente = 'pruebas';
+      }
     }
 
     const baseUrl = ambiente === 'produccion'
       ? 'https://app.factureromovil.com/api'
       : 'https://apptest.factureromovil.com/api';
 
-    // ── Construir headers ─────────────────────────────────────────────────────
-    const headers = {
+    console.log(`[facturero-proxy] ${method.toUpperCase()} ${baseUrl}${path} (ambiente: ${ambiente})`);
+
+    // ── Construir headers para la petición a Facturero Móvil ─────────────────
+    const fmHeaders = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
-
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      fmHeaders['Authorization'] = `Bearer ${token}`;
     }
 
-    // ── Reenviar petición a Facturero Móvil ───────────────────────────────────
+    // ── Preparar opciones del fetch ───────────────────────────────────────────
     const fetchOptions = {
       method: method.toUpperCase(),
-      headers,
+      headers: fmHeaders,
+      signal: AbortSignal.timeout(15000), // Timeout de 15 segundos
     };
 
     if (body && method.toUpperCase() !== 'GET') {
       fetchOptions.body = JSON.stringify(body);
     }
 
-    const fmRes = await fetch(`${baseUrl}${path}`, fetchOptions);
+    // ── Llamar a Facturero Móvil ──────────────────────────────────────────────
+    let fmRes;
+    try {
+      fmRes = await fetch(`${baseUrl}${path}`, fetchOptions);
+    } catch (fetchErr) {
+      const isTimeout = fetchErr.name === 'TimeoutError' || fetchErr.name === 'AbortError';
+      console.error('[facturero-proxy] Error de red hacia Facturero Móvil:', fetchErr.message);
+      return res.status(502).json({
+        error: isTimeout
+          ? 'Tiempo de espera agotado al contactar Facturero Móvil.'
+          : 'No se pudo conectar a Facturero Móvil.',
+        detail: fetchErr.message,
+      });
+    }
 
-    // Leer respuesta (puede ser JSON o texto)
+    // ── Leer respuesta ────────────────────────────────────────────────────────
     let fmData;
     const contentType = fmRes.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
-      fmData = await fmRes.json();
+      fmData = await fmRes.json().catch(() => ({}));
     } else {
-      const text = await fmRes.text();
-      try {
-        fmData = JSON.parse(text);
-      } catch {
-        fmData = { raw: text };
-      }
+      const text = await fmRes.text().catch(() => '');
+      try { fmData = JSON.parse(text); } catch { fmData = { message: text || 'Sin respuesta' }; }
     }
 
-    // Devolver el mismo status code que Facturero Móvil
+    console.log(`[facturero-proxy] Respuesta de FM: ${fmRes.status}`);
+
+    // ── Devolver el mismo status que Facturero Móvil ──────────────────────────
     return res.status(fmRes.status).json(fmData);
 
   } catch (err) {
-    console.error('[facturero-proxy] Error:', err);
-    return res.status(500).json({ error: 'Error en el proxy.', detail: err.message });
+    // Catch-all de último recurso — garantiza siempre JSON, nunca HTML 500 de Vercel
+    console.error('[facturero-proxy] Error inesperado:', err);
+    return res.status(500).json({
+      error: 'Error inesperado en el proxy.',
+      detail: err?.message || String(err),
+    });
   }
 }

@@ -1,11 +1,15 @@
 import { supabase } from './../lib/supabase';
 
 /**
- * Servicio para interactuar con Facturero Móvil
+ * Servicio para interactuar con Facturero Móvil a través del proxy serverless.
+ *
+ * IMPORTANTE: Las llamadas directas al browser → app.factureromovil.com
+ * son bloqueadas por CORS. Por eso todas las peticiones van a través de
+ * /api/facturero-proxy (Vercel Serverless), que actúa de intermediario.
  */
 class FactureroService {
   constructor() {
-    this.token = null;
+    this.token = null;    // JWT de Facturero Móvil (no de Supabase)
     this.config = null;
   }
 
@@ -15,29 +19,56 @@ class FactureroService {
     return data;
   }
 
+  /**
+   * Obtiene el JWT de Supabase del usuario actual para autenticar el proxy.
+   */
+  async getSupabaseToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No hay sesión activa. Por favor inicia sesión.');
+    }
+    return session.access_token;
+  }
+
+  /**
+   * Llama al proxy serverless en lugar de llamar directamente a Facturero Móvil.
+   * Esto evita el bloqueo CORS del navegador.
+   */
+  async callProxy({ path, method = 'GET', body, token }) {
+    const supabaseToken = await this.getSupabaseToken();
+
+    const res = await fetch('/api/facturero-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseToken}`,
+      },
+      body: JSON.stringify({ path, method, body, token }),
+    });
+
+    return res;
+  }
+
   async login() {
     if (!this.config) await this.loadConfig();
-    
-    // Las credenciales de Facturero Móvil deben estar en la tabla config_club
-    // (campo facturero_user y facturero_password). NO usar variables VITE_* 
-    // en el frontend ya que esas quedarían expuestas en el bundle del navegador.
+
     const username = this.config?.facturero_user;
     const password = this.config?.facturero_password;
-    const ambiente = this.config?.facturero_ambiente || 'pruebas';
-    const baseUrl = ambiente === 'produccion' ? 'https://app.factureromovil.com/api' : 'https://apptest.factureromovil.com/api';
 
     if (!username || !password) {
       throw new Error('Faltan credenciales de Facturero Móvil en la Configuración del Club (Ajustes → Configuración de Facturación)');
     }
 
-    const response = await fetch(`${baseUrl}/login_check`, {
+    // Login a través del proxy (evita CORS)
+    const response = await this.callProxy({
+      path: '/login_check',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _username: username, _password: password })
+      body: { _username: username, _password: password },
     });
 
     if (!response.ok) {
-      throw new Error('Error al autenticar con Facturero Móvil');
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.message || `Error al autenticar con Facturero Móvil (${response.status})`);
     }
 
     const data = await response.json();
@@ -45,28 +76,23 @@ class FactureroService {
     return this.token;
   }
 
-  async fetchWithAuth(endpoint, options = {}) {
-    const ambiente = this.config?.facturero_ambiente || 'pruebas';
-    const baseUrl = ambiente === 'produccion' ? 'https://app.factureromovil.com/api' : 'https://apptest.factureromovil.com/api';
-
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.token}`,
-        ...(options.headers || {})
-      }
+  async fetchWithAuth(path, options = {}) {
+    // Primera petición autenticada
+    const response = await this.callProxy({
+      path,
+      method: options.method || 'GET',
+      body: options.body ? JSON.parse(options.body) : undefined,
+      token: this.token,
     });
 
     if (response.status === 401) {
+      // Token expirado: re-login y reintento
       await this.login();
-      return fetch(`${baseUrl}${endpoint}`, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.token}`,
-          ...(options.headers || {})
-        }
+      return this.callProxy({
+        path,
+        method: options.method || 'GET',
+        body: options.body ? JSON.parse(options.body) : undefined,
+        token: this.token,
       });
     }
 
@@ -89,7 +115,7 @@ class FactureroService {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       console.warn('Error al crear cliente en Facturero (puede que ya exista):', data);
       throw new Error(data.message || 'Error al crear cliente en Facturero Móvil');
@@ -169,7 +195,7 @@ class FactureroService {
   async emitirFactura(clienteId, itemsOrMonto, tipoProducto = 'pension') {
     if (!this.config) await this.loadConfig();
     const hoy = new Date().toISOString().split('T')[0];
-    
+
     let detallesFactura = [];
     let totalFactura = 0;
 
@@ -190,7 +216,7 @@ class FactureroService {
       });
     } else {
       // Retrocompatibilidad con llamadas legacy: emitirFactura(clienteId, monto, tipoProducto)
-      const productoId = tipoProducto === 'matricula' 
+      const productoId = tipoProducto === 'matricula'
         ? (this.config?.facturero_producto_matricula_id || '1')
         : (this.config?.facturero_producto_pension_id || '2');
 

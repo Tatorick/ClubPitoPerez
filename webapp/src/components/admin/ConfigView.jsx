@@ -260,26 +260,42 @@ export default function ConfigView() {
     setTestingApi(true);
     setTestResult(null);
     try {
-      const baseUrl = form.facturero_ambiente === 'produccion' 
-        ? 'https://app.factureromovil.com/api' 
-        : 'https://apptest.factureromovil.com/api';
-        
-      const res = await fetch(`${baseUrl}/login_check`, {
+      // ⚠️ Las llamadas directas al browser son bloqueadas por CORS.
+      // Usamos el proxy serverless /api/facturero-proxy que hace la
+      // petición desde el servidor (sin restricciones CORS).
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setTestResult({ ok: false, message: '❌ No hay sesión activa. Por favor inicia sesión.' });
+        setTestingApi(false);
+        return;
+      }
+
+      const res = await fetch('/api/facturero-proxy', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
-          _username: form.facturero_user,
-          _password: form.facturero_password
-        })
+          path: '/login_check',
+          method: 'POST',
+          body: {
+            _username: form.facturero_user,
+            _password: form.facturero_password,
+          },
+        }),
       });
+
       if (res.ok) {
-        setTestResult({ ok: true, message: `✅ Conexión exitosa con Facturero Móvil (${form.facturero_ambiente}).` });
+        const ambienteLabel = form.facturero_ambiente === 'produccion' ? '🔵 Producción' : '🟡 Pruebas';
+        setTestResult({ ok: true, message: `✅ Conexión exitosa con Facturero Móvil (${ambienteLabel}).` });
       } else {
         const data = await res.json().catch(() => ({}));
-        setTestResult({ ok: false, message: `❌ Error ${res.status}: Credenciales inválidas.` });
+        const msg = data?.message || data?.error || `Error ${res.status}`;
+        setTestResult({ ok: false, message: `❌ Credenciales inválidas: ${msg}` });
       }
     } catch (err) {
-      setTestResult({ ok: false, message: `❌ No se pudo conectar: ${err.message}` });
+      setTestResult({ ok: false, message: `❌ No se pudo conectar al proxy: ${err.message}` });
     }
     setTestingApi(false);
   };
@@ -536,7 +552,7 @@ export default function ConfigView() {
                       ? 'bg-blue-100 text-blue-700'
                       : 'bg-amber-100 text-amber-700'
                   }`}>
-                    {form.autorizadorec_ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
+                    {form.facturero_ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
                   </span>
                 )}
               </h3>

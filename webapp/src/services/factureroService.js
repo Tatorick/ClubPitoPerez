@@ -170,23 +170,32 @@ class FactureroService {
 
   /**
    * Construye el desglose de ítems para Facturero Móvil.
-   * Se asegura de que la suma de los ítems sea EXACTAMENTE igual al monto_real de la transacción.
+   * Se asegura de que la suma de los ítems sea la Base Imponible correcta
+   * según el IVA configurado, para que el total final coincida con monto_real.
    */
   async construirDetallesFactura(transaccion, miembro, config = this.config) {
     const mesesCubiertos = transaccion?.meses_cubiertos || [];
-    const precioMatricula = Number(config?.precio_matricula || 25.00);
+    
+    // Obtener la tarifa de IVA configurada (ej: 0 o 15)
+    const tarifaIva = Number(config?.tarifa_iva || 0);
+    const factorIva = 1 + (tarifaIva / 100);
+
     const montoReal = Number(transaccion?.monto_real || 0);
+    // Extraemos la base imponible (sin IVA) para enviar en el precioUnitario
+    const baseTotal = Number((montoReal / factorIva).toFixed(4));
+    
+    const precioMatriculaBase = Number((Number(config?.precio_matricula || 25.00) / factorIva).toFixed(4));
 
     const tieneMatricula = mesesCubiertos.includes('MAT');
     const mesesPension   = mesesCubiertos.filter(m => m !== 'MAT');
 
     const detalles = [];
-    let restante = montoReal;
+    let restante = baseTotal;
 
     // 1. Matrícula — siempre cobra su valor (o lo que quede)
     if (tieneMatricula) {
       const idMatricula = await this.resolverProductoId('matricula', config?.facturero_producto_matricula_id);
-      const valorMatricula = restante >= precioMatricula ? precioMatricula : restante;
+      const valorMatricula = restante >= precioMatriculaBase ? precioMatriculaBase : restante;
       
       if (valorMatricula > 0) {
         detalles.push({
@@ -195,7 +204,7 @@ class FactureroService {
           precioUnitario: valorMatricula,
           descuento: 0.00,
         });
-        restante = Number((restante - valorMatricula).toFixed(2));
+        restante = Number((restante - valorMatricula).toFixed(4));
       }
     }
 
@@ -229,14 +238,20 @@ class FactureroService {
   /**
    * Emite una factura en Facturero Móvil.
    */
-  async emitirFactura(clienteId, detallesFactura) {
+  async emitirFactura(clienteId, detallesFactura, config = this.config) {
     const hoy = new Date().toISOString().split('T')[0];
+    
+    const tarifaIva = Number(config?.tarifa_iva || 0);
 
-    // Calcular total
-    const totalFactura = detallesFactura.reduce((sum, item) => {
-      const subtotal = (Number(item.cantidad) * Number(item.precioUnitario)) - Number(item.descuento || 0);
-      return sum + (subtotal > 0 ? subtotal : 0);
+    // Calcular subtotal (Base Imponible)
+    const subtotal = detallesFactura.reduce((sum, item) => {
+      const itemSub = (Number(item.cantidad) * Number(item.precioUnitario)) - Number(item.descuento || 0);
+      return sum + (itemSub > 0 ? itemSub : 0);
     }, 0);
+
+    // Calcular IVA y Total
+    const ivaTotal = Number((subtotal * (tarifaIva / 100)).toFixed(2));
+    const totalFactura = subtotal + ivaTotal;
 
     const payload = {
       fechaEmision: hoy,

@@ -9,8 +9,9 @@ import { supabase } from './../lib/supabase';
  */
 class FactureroService {
   constructor() {
-    this.fmToken = null; // JWT de Facturero Móvil (cacheado en memoria)
+    this.fmToken = null;     // JWT de Facturero Móvil (cacheado en memoria)
     this.config = null;
+    this.productosCache = null; // Cache de productos disponibles en FM
   }
 
   async loadConfig() {
@@ -21,7 +22,6 @@ class FactureroService {
 
   /**
    * Llama al proxy serverless /api/facturero-proxy.
-   * El proxy maneja autenticación con Facturero Móvil internamente.
    */
   async callProxy({ path, method = 'GET', body, token }) {
     const res = await fetch('/api/facturero-proxy', {
@@ -33,8 +33,7 @@ class FactureroService {
   }
 
   /**
-   * Obtiene (o renueva) el JWT de Facturero Móvil.
-   * El proxy hace el login con las credenciales de env vars.
+   * Login con Facturero Móvil. El proxy usa las credenciales de env vars.
    */
   async login() {
     const response = await this.callProxy({
@@ -53,7 +52,6 @@ class FactureroService {
   }
 
   async fetchWithAuth(path, options = {}) {
-    // Parsear body si viene como string (para mantener compatibilidad)
     const bodyData = typeof options.body === 'string'
       ? JSON.parse(options.body)
       : options.body;
@@ -66,7 +64,6 @@ class FactureroService {
     });
 
     if (response.status === 401) {
-      // Token expirado: re-login y reintento
       await this.login();
       return this.callProxy({
         path,
@@ -77,6 +74,73 @@ class FactureroService {
     }
 
     return response;
+  }
+
+  /**
+   * Obtiene la lista de productos disponibles en Facturero Móvil.
+   * Usa caché en memoria para no hacer múltiples llamadas por sesión.
+   */
+  async getProductos() {
+    if (this.productosCache) return this.productosCache;
+
+    try {
+      const res = await this.fetchWithAuth('/productos');
+      if (res.ok) {
+        const data = await res.json();
+        // FM puede devolver array directo o { items: [...] }
+        const lista = Array.isArray(data) ? data : (data?.items || data?.productos || []);
+        this.productosCache = lista;
+        console.log(`[FactureroService] ${lista.length} productos encontrados en FM`);
+        return lista;
+      }
+    } catch (e) {
+      console.warn('[FactureroService] No se pudo obtener lista de productos:', e.message);
+    }
+    return [];
+  }
+
+  /**
+   * Resuelve el ID real de un producto en FM.
+   * Orden de prioridad:
+   *   1. ID configurado en config_club (si es un número válido, no "001"/"002")
+   *   2. Buscar en la lista de productos por nombre (matrícula o pensión)
+   *   3. Usar el primer producto disponible como fallback
+   */
+  async resolverProductoId(tipo, idConfigurado) {
+    // Si el ID configurado es un número real (> 3 dígitos o != "001"/"002")
+    const idNum = parseInt(idConfigurado, 10);
+    const esIdValido = !isNaN(idNum) && idNum > 100 && idConfigurado !== '001' && idConfigurado !== '002';
+    if (esIdValido) return idNum;
+
+    // Buscar en la lista de productos de FM
+    const productos = await this.getProductos();
+
+    if (productos.length === 0) {
+      throw new Error(
+        'No hay productos configurados en Facturero Móvil. ' +
+        'Crea al menos un producto en tu cuenta (Inventario → Productos) ' +
+        'e ingresa su ID en Ajustes → Facturación.'
+      );
+    }
+
+    // Intentar encontrar el producto correcto por nombre
+    const keywords = tipo === 'matricula'
+      ? ['matr', 'inscr', 'registr']
+      : ['mens', 'pens', 'cuota', 'memb'];
+
+    const encontrado = productos.find(p => {
+      const nombre = (p.nombre || p.descripcion || p.name || '').toLowerCase();
+      return keywords.some(k => nombre.includes(k));
+    });
+
+    if (encontrado) {
+      console.log(`[FactureroService] Producto '${tipo}' encontrado por nombre: ${encontrado.id}`);
+      return encontrado.id;
+    }
+
+    // Fallback: usar el primer producto disponible
+    console.warn(`[FactureroService] No se encontró producto '${tipo}' por nombre, usando el primero disponible: ${productos[0].id}`);
+    return productos[0].id;
   }
 
   async crearCliente(cliente) {
@@ -105,34 +169,40 @@ class FactureroService {
   }
 
   /**
-   * Construye el desglose de ítems para Facturero Móvil a partir de una transacción y los datos del miembro.
-   * - Matrícula ('MAT'): se factura con el precio de matrícula (ej. $25) SIN descuento.
-   * - Pensión ('OCT', 'NOV', etc.): se factura con el precio base de pensión (ej. $55) y el descuento correspondiente (beca/porcentaje).
+   * Construye el desglose de ítems para Facturero Móvil.
+   * Resuelve automáticamente los IDs reales de los productos.
    */
-  construirDetallesFactura(transaccion, miembro, config = this.config) {
+  async construirDetallesFactura(transaccion, miembro, config = this.config) {
     const mesesCubiertos = transaccion?.meses_cubiertos || [];
     const precioMatricula = Number(config?.precio_matricula || 25.00);
-    const precioPension = Number(config?.precio_pension || 55.00);
-    const prodMatriculaId = config?.facturero_producto_matricula_id || '1';
-    const prodPensionId = config?.facturero_producto_pension_id || '2';
+    const precioPension   = Number(config?.precio_pension   || 55.00);
 
     const tieneMatricula = mesesCubiertos.includes('MAT');
-    const mesesPension = mesesCubiertos.filter(m => m !== 'MAT');
+    const mesesPension   = mesesCubiertos.filter(m => m !== 'MAT');
 
     const detalles = [];
 
-    // 1. Matrícula: Siempre valor completo, nunca tiene descuento
+    // 1. Matrícula — sin descuento
     if (tieneMatricula) {
+      const idMatricula = await this.resolverProductoId(
+        'matricula',
+        config?.facturero_producto_matricula_id
+      );
       detalles.push({
-        producto: prodMatriculaId.toString(),
+        producto: idMatricula,
         cantidad: 1.00,
         precioUnitario: precioMatricula,
         descuento: 0.00,
       });
     }
 
-    // 2. Pensión: Aplica el porcentaje de beca/descuento correspondiente
+    // 2. Pensión — con descuento si aplica
     if (mesesPension.length > 0) {
+      const idPension = await this.resolverProductoId(
+        'pension',
+        config?.facturero_producto_pension_id
+      );
+
       const descuentoPorcentaje = Number(miembro?.descuento_porcentaje || 0);
       let descuentoUnitario = 0;
 
@@ -142,22 +212,26 @@ class FactureroService {
         descuentoUnitario = Number((precioPension - Number(miembro.monto_pension)).toFixed(2));
       }
 
-      const cantidad = mesesPension.length;
+      const cantidad       = mesesPension.length;
       const descuentoTotal = Number((descuentoUnitario * cantidad).toFixed(2));
 
       detalles.push({
-        producto: prodPensionId.toString(),
+        producto: idPension,
         cantidad: Number(cantidad.toFixed(2)),
         precioUnitario: precioPension,
         descuento: descuentoTotal,
       });
     }
 
-    // Caso de respaldo
+    // Fallback: si no hay meses_cubiertos especificados
     if (detalles.length === 0) {
+      const idPension = await this.resolverProductoId(
+        'pension',
+        config?.facturero_producto_pension_id
+      );
       const monto = Number(transaccion?.monto_real || precioPension);
       detalles.push({
-        producto: prodPensionId.toString(),
+        producto: idPension,
         cantidad: 1.00,
         precioUnitario: monto,
         descuento: 0.00,
@@ -169,42 +243,15 @@ class FactureroService {
 
   /**
    * Emite una factura en Facturero Móvil.
-   * Soporta un array de detalles o un monto numérico directo (retrocompatibilidad).
    */
-  async emitirFactura(clienteId, itemsOrMonto, tipoProducto = 'pension') {
-    if (!this.config) await this.loadConfig();
+  async emitirFactura(clienteId, detallesFactura) {
     const hoy = new Date().toISOString().split('T')[0];
 
-    let detallesFactura = [];
-    let totalFactura = 0;
-
-    if (Array.isArray(itemsOrMonto)) {
-      detallesFactura = itemsOrMonto.map(item => {
-        const cantidad = Number(item.cantidad || 1);
-        const precioUnitario = parseFloat(item.precioUnitario || 0);
-        const descuento = parseFloat(item.descuento || 0);
-        const subtotal = (cantidad * precioUnitario) - descuento;
-        totalFactura += subtotal > 0 ? subtotal : 0;
-        return {
-          producto: (item.producto || item.productoId || '1').toString(),
-          cantidad,
-          precioUnitario,
-          descuento,
-        };
-      });
-    } else {
-      const productoId = tipoProducto === 'matricula'
-        ? (this.config?.facturero_producto_matricula_id || '1')
-        : (this.config?.facturero_producto_pension_id || '2');
-      const monto = parseFloat(itemsOrMonto || 0);
-      totalFactura = monto;
-      detallesFactura = [{
-        producto: productoId.toString(),
-        cantidad: 1.00,
-        precioUnitario: monto,
-        descuento: 0,
-      }];
-    }
+    // Calcular total
+    const totalFactura = detallesFactura.reduce((sum, item) => {
+      const subtotal = (Number(item.cantidad) * Number(item.precioUnitario)) - Number(item.descuento || 0);
+      return sum + (subtotal > 0 ? subtotal : 0);
+    }, 0);
 
     const payload = {
       fechaEmision: hoy,
@@ -224,38 +271,36 @@ class FactureroService {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Error al emitir factura: ${err}`);
+      const err = await response.json().catch(() => ({}));
+      throw new Error(`Error al emitir factura: ${err?.message || JSON.stringify(err)}`);
     }
 
     return await response.json();
   }
 
   /**
-   * Método de alto nivel para emitir la factura de una transacción:
-   * 1. Login con Facturero Móvil (credenciales desde env vars del servidor)
-   * 2. Crea u obtiene el cliente
-   * 3. Desglosa los productos (Matrícula sin descuento y Pensión con descuento)
-   * 4. Emite la factura y actualiza la transacción en Supabase
+   * Método principal: emite la factura de una transacción completa.
    */
   async emitirFacturaTransaccion({ transaccion, miembro }) {
     if (!this.config) await this.loadConfig();
 
-    // Login con credenciales de env vars (el proxy lo maneja)
+    // 1. Autenticarse con FM (proxy usa env vars)
     await this.login();
 
+    // 2. Datos del comprador
     const cedula    = (miembro.facturacion_ruc || miembro.cedula || '9999999999999').trim();
     const nombre    = (miembro.facturacion_nombre || miembro.nombres || 'Consumidor Final').trim();
     const direccion = (miembro.facturacion_direccion || this.config?.direccion_matriz || 'Quito').trim();
     const telefono  = (miembro.facturacion_telefono || miembro.madre_telefono || miembro.padre_telefono || '0999999999').trim();
     const email     = (miembro.facturacion_correo || this.config?.email_club || 'correo@ejemplo.com').trim();
 
+    // 3. Crear o localizar cliente en FM
     let clienteId = null;
     try {
       const resCliente = await this.crearCliente({ cedula, nombre, direccion, telefono, email });
       clienteId = resCliente?.id || resCliente?.cliente?.id || resCliente?.idCliente;
     } catch (clienteErr) {
-      console.warn('Nota al crear/buscar cliente:', clienteErr.message);
+      console.warn('Nota al crear cliente:', clienteErr.message);
       try {
         const searchRes = await this.fetchWithAuth(`/clientes?search=${encodeURIComponent(cedula)}`);
         if (searchRes.ok) {
@@ -269,22 +314,43 @@ class FactureroService {
       }
     }
 
-    if (!clienteId) clienteId = 43604;
+    if (!clienteId) {
+      // Intentar buscar un cliente "Consumidor Final" existente
+      try {
+        const searchRes = await this.fetchWithAuth('/clientes?search=consumidor');
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const items = Array.isArray(searchData) ? searchData : (searchData.items || searchData.clientes || []);
+          if (items.length > 0) clienteId = items[0].id;
+        }
+      } catch (e) { /* ignorar */ }
+    }
 
-    const detalles = this.construirDetallesFactura(transaccion, miembro, this.config);
+    if (!clienteId) {
+      throw new Error(
+        'No se pudo crear ni encontrar el cliente en Facturero Móvil. ' +
+        'Verifica que los datos de facturación del deportista (cédula y nombre) sean correctos.'
+      );
+    }
+
+    // 4. Construir ítems (resuelve IDs de productos automáticamente)
+    const detalles = await this.construirDetallesFactura(transaccion, miembro, this.config);
+
+    // 5. Emitir factura
     const resFactura = await this.emitirFactura(clienteId, detalles);
 
     const numeroDoc = resFactura.numeroDocumento || resFactura.id || 'TBD';
     const pdfUrl    = resFactura.pdf || resFactura.urlPdf || '';
     const xmlUrl    = resFactura.xml || resFactura.urlXml || '';
 
+    // 6. Actualizar transacción en Supabase
     const { error: dbErr } = await supabase
       .from('transacciones')
       .update({
-        factura_id:      numeroDoc,
-        factura_pdf:     pdfUrl,
-        factura_xml:     xmlUrl,
-        estado_factura:  'autorizado',
+        factura_id:     numeroDoc,
+        factura_pdf:    pdfUrl,
+        factura_xml:    xmlUrl,
+        estado_factura: 'autorizado',
       })
       .eq('id', transaccion.id);
 

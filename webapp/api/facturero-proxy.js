@@ -50,19 +50,23 @@ export default async function handler(req, res) {
   const supabase = getSupabaseAdmin();
 
   try {
-    const { path, method = 'GET', body, token } = req.body || {};
+    const { path, method = 'GET', body, token, ambiente: ambienteParam } = req.body || {};
 
     if (!path) {
       return res.status(400).json({ error: 'Falta el parámetro "path".' });
     }
 
-    // ── Leer configuración del club para saber el ambiente ────────────────────
-    const { data: config } = await supabase
-      .from('config_club')
-      .select('facturero_ambiente, facturero_user, facturero_password')
-      .maybeSingle();
+    // ── Determinar el ambiente: usar el que viene en el request o leer de la BD ─────
+    // Prioridad: 1º el que manda el frontend (para el test), 2º el de config_club
+    let ambiente = ambienteParam;
+    if (!ambiente) {
+      const { data: config } = await supabase
+        .from('config_club')
+        .select('facturero_ambiente')
+        .maybeSingle();
+      ambiente = config?.facturero_ambiente || 'pruebas';
+    }
 
-    const ambiente = config?.facturero_ambiente || 'pruebas';
     const baseUrl = ambiente === 'produccion'
       ? 'https://app.factureromovil.com/api'
       : 'https://apptest.factureromovil.com/api';

@@ -279,6 +279,9 @@ export default function ConfigView() {
         body: JSON.stringify({
           path: '/login_check',
           method: 'POST',
+          // Pasamos el ambiente del formulario para que el proxy use el servidor correcto
+          // aunque aún no se haya guardado en la BD
+          ambiente: form.facturero_ambiente,
           body: {
             _username: form.facturero_user,
             _password: form.facturero_password,
@@ -291,8 +294,12 @@ export default function ConfigView() {
         setTestResult({ ok: true, message: `✅ Conexión exitosa con Facturero Móvil (${ambienteLabel}).` });
       } else {
         const data = await res.json().catch(() => ({}));
-        const msg = data?.message || data?.error || `Error ${res.status}`;
-        setTestResult({ ok: false, message: `❌ Credenciales inválidas: ${msg}` });
+        const msg = data?.message || data?.error || data?.detail || `Error ${res.status}`;
+        if (res.status >= 500) {
+          setTestResult({ ok: false, message: `❌ Error interno del servidor: ${msg}` });
+        } else {
+          setTestResult({ ok: false, message: `❌ Credenciales inválidas (${form.facturero_ambiente}): ${msg}` });
+        }
       }
     } catch (err) {
       setTestResult({ ok: false, message: `❌ No se pudo conectar al proxy: ${err.message}` });

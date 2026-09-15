@@ -530,6 +530,9 @@ function PagosTab({ member, onUpdateMember }) {
       t.id === txn.id ? { ...t, ...updateData } : t
     );
     if (onUpdateMember) onUpdateMember({ ...member, transacciones: updatedTxns });
+
+    // Cerrar el modal de comprobante para que refleje el nuevo estado
+    setReceiptOpen(null);
   };
 
   const handleCellClick = (mes) => {

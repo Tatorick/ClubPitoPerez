@@ -119,8 +119,8 @@ function DashboardView({ miembros, precioPension }) {
   const mesActual = ahora.getMonth();
   const anioActual = ahora.getFullYear();
 
-  // Solo transacciones aprobadas
-  const aprobadas = transacciones.filter(t => t.estado_verificacion === 'aprobado' || !t.estado_verificacion);
+  // Solo transacciones aprobadas (excluye explicitamente las rechazadas)
+  const aprobadas = transacciones.filter(t => t.estado_verificacion !== 'rechazado' && t.estado_verificacion !== 'pendiente_verificacion');
 
   // Ingresos del mes actual
   const ingresosMes = aprobadas

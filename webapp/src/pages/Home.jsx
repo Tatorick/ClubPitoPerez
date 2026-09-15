@@ -315,7 +315,7 @@ export default function Home() {
             {/* Card 1 */}
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:-translate-y-2 hover:shadow-lg transition-all duration-300 group fade-in-up">
               <div className="h-48 overflow-hidden relative">
-                <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{backgroundImage:"url('https://lh3.googleusercontent.com/aida-public/AB6AXuAlqxahNtWljiBwI46ZmnYUJG84neqxrSEjrGJvBW-YmSAsFh9TYgr58H6Dc0Wzp269tx5H_ajP1KmtVBp_GpQIvZXQA2Jh7ob2ZyfpYdnfd7nzYwBHzMLDTkvEmL1HEx0fb6h61vGdSBcnTsMaFqyJGzGypxQ6T4FTHItCQQDUihZU98Uwyn0CoTYccoZ5GVoiQSl4VataZ1e4YfYcfjCu30WvNII3sifS2rg63aaaUoLBRHfbXrkm')"}} />
+                <div className="w-full h-full bg-cover group-hover:scale-105 transition-transform duration-500" style={{backgroundImage:"url('/otros/mini.jpeg')", backgroundPosition: 'center 22%'}} />
                 <div className="absolute top-4 left-4 bg-surface text-primary px-3 py-1 rounded-full font-caption text-caption">Edades 8-12</div>
               </div>
               <div className="p-6">
@@ -332,7 +332,7 @@ export default function Home() {
             <div className="bg-primary border border-tertiary rounded-xl overflow-hidden shadow-lg hover:-translate-y-2 hover:shadow-xl transition-all duration-300 group relative fade-in-up" style={{transitionDelay:'100ms'}}>
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-tertiary to-tertiary-fixed-dim" />
               <div className="h-48 overflow-hidden relative">
-                <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500 opacity-80" style={{backgroundImage:"url('https://lh3.googleusercontent.com/aida-public/AB6AXuBCXAYvvvwH2JfsX48kRiRLy97T6PzOxRkzQs2-6gxR0aWt5Fg6v_1bJZYYkYOpBUC3q2QXhOwFTm3AqHqkFBNyUGtKSPrph4_AUqZMvB9u9a2YHOZ9KJI95EYEohzYr3fP7_4q4wmFIvXezqBMoQBKixodfZUB8Mnz9SPmGCI-Z-a6AGUUUD9vnESn_8OjEMmEIrYkb9TZt7_xZq8ZNLGmYB5uYvIJI8ffLbNjrBdl_mLXrcE6sqRH')"}} />
+                <div className="w-full h-full bg-cover group-hover:scale-105 transition-transform duration-500" style={{backgroundImage:"url('/otros/sec1.jpg')", backgroundPosition: 'center 50%'}} />
                 <div className="absolute top-4 left-4 bg-tertiary text-on-tertiary px-3 py-1 rounded-full font-caption text-caption flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings:"'FILL' 1"}}>star</span> Competitivo
                 </div>
@@ -350,7 +350,7 @@ export default function Home() {
             {/* Card 3 */}
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:-translate-y-2 hover:shadow-lg transition-all duration-300 group fade-in-up" style={{transitionDelay:'200ms'}}>
               <div className="h-48 overflow-hidden relative">
-                <div className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500" style={{backgroundImage:"url('https://lh3.googleusercontent.com/aida-public/AB6AXuDypaWYWlvNTdKYh9THn4pmy-oSBZo-BTbVDEUarD_GZDjPXVfOYPo8jUVv9KXMj9juHnN8qXY9HB35WD_GsfwUeI34NEqeexzt95guVQ5jLgJd0nWIenEWpFIJ-UoG6hpx50biTYEkvKfoYzbNEwnjpelmvOrNf0t_4ex6MZAfqlMkfRXjIqmHmyrpUL5U6V4mo4C8f7NXxe6l9GblunHR9WXfg-fW_FtUeWYRhjT7OqpgiCcKSw8k')"}} />
+                <div className="w-full h-full bg-cover group-hover:scale-105 transition-transform duration-500" style={{backgroundImage:"url('/otros/Premios.jpeg')", backgroundPosition: 'center 18%'}} />
                 <div className="absolute top-4 left-4 bg-surface text-primary px-3 py-1 rounded-full font-caption text-caption">Participación General</div>
               </div>
               <div className="p-6">

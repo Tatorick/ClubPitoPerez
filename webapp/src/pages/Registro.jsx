@@ -64,6 +64,24 @@ function validarEmail(email) {
   return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim());
 }
 
+// ── Categoría por edad ───────────────────────────────────────────────────────────────────────
+/**
+ * Calcula la categoría deportiva según la fecha de nacimiento.
+ * Usa la edad que el jugador CUMPLE en el año en curso (sin importar el mes).
+ */
+function calcularCategoria(fechaNacimiento) {
+  if (!fechaNacimiento) return 'U14';
+  const anioNac = new Date(fechaNacimiento).getFullYear();
+  const anioActual = new Date().getFullYear();
+  const edad = anioActual - anioNac;
+  if (edad < 10) return 'Sub10';
+  if (edad <= 11) return 'U12';
+  if (edad <= 13) return 'U14';
+  if (edad <= 15) return 'U16';
+  if (edad <= 17) return 'U18';
+  return 'Mayores';
+}
+
 // ── Sanitización ─────────────────────────────────────────────────────────────────────────────
 /**
  * Elimina caracteres HTML especiales de cadenas de texto libre.
@@ -475,7 +493,7 @@ export default function Registro() {
         genero: formData.genero,
         nacionalidad: sanitizeText(formData.nacionalidad.trim()),
         direccion: sanitizeText(formData.direccion.trim()),
-        categoria: 'U14',
+        categoria: calcularCategoria(formData.fechaNacimientoJugador),
         tiene_beca: false,
         monto_pension: 55,
         tiene_discapacidad: formData.discapacidad === 'SI',

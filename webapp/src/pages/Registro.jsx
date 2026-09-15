@@ -31,18 +31,29 @@ function validarCedulaEC(cedula) {
 
 /** Valida RUC (13 dígitos) o cédula (10 dígitos) */
 function validarRucOCedula(valor) {
-  const v = valor.trim();
+  if (!valor) return false;
+  const v = valor.toString().trim().replace(/[\s-]/g, '');
   if (v.length === 10) return validarCedulaEC(v);
   if (v.length === 13) {
-    if (!validarCedulaEC(v.substring(0, 10))) return false;
-    return v.endsWith('001');
+    if (!v.endsWith('001')) return false;
+    const tercerDigito = parseInt(v[2], 10);
+    if (tercerDigito < 6) {
+      return validarCedulaEC(v.substring(0, 10));
+    }
+    // RUC jurídico / público
+    return /^\d{13}$/.test(v);
   }
   return false;
 }
 
-/** Valida teléfono celular ecuatoriano: empieza con 09, 10 dígitos */
-function validarCelularEC(tel) {
-  return /^09\d{8}$/.test(tel.trim());
+/** Valida teléfono celular o convencional ecuatoriano, tolerando espacios y guiones */
+function validarTelefonoEC(tel) {
+  if (!tel) return false;
+  const clean = tel.toString().replace(/\D/g, '');
+  if (clean.length === 10 && clean.startsWith('09')) return true; // Celular nacional
+  if (clean.length === 9 && /^0[2-7]/.test(clean)) return true;   // Convencional nacional
+  if (clean.startsWith('593') && clean.length === 12) return true; // Con prefijo 593
+  return false;
 }
 
 /** Valida email con regex estricto */
@@ -170,7 +181,6 @@ export default function Registro() {
     nombresMadre: '', cedulaMadre: '', telefonoMadre: '', ocupacionMadre: '',
     esRepresentante: 'Madre',
     // Paso 4
-    sinFactura: false, // true = omitir datos de facturación
     rucFacturacion: '', nombreFacturacion: '', direccionFacturacion: '',
     telefonoFacturacion: '', correoFacturacion: '',
     // Paso 5
@@ -181,6 +191,33 @@ export default function Registro() {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     if (fieldErrors[name]) setFieldErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+  };
+
+  /** Copia automáticamente los datos del representante a los campos de facturación */
+  const handleCopiarDatosFacturacion = () => {
+    const esMadre = formData.esRepresentante === 'Madre';
+    const nombreRep = (esMadre ? formData.nombresMadre : formData.nombresPadre) || formData.firmaRepresentante;
+    const cedulaRep = esMadre ? formData.cedulaMadre : formData.cedulaPadre;
+    const telRep    = esMadre ? formData.telefonoMadre : formData.telefonoPadre;
+
+    setFormData(prev => ({
+      ...prev,
+      rucFacturacion: cedulaRep || prev.rucFacturacion,
+      nombreFacturacion: nombreRep || prev.nombreFacturacion,
+      telefonoFacturacion: telRep || prev.telefonoFacturacion,
+      direccionFacturacion: prev.direccion || prev.direccionFacturacion,
+      correoFacturacion: prev.email || prev.correoFacturacion,
+    }));
+
+    setFieldErrors(prev => {
+      const n = { ...prev };
+      delete n.rucFacturacion;
+      delete n.nombreFacturacion;
+      delete n.telefonoFacturacion;
+      delete n.direccionFacturacion;
+      delete n.correoFacturacion;
+      return n;
+    });
   };
 
   const steps = ['Jugador y Cuenta', 'Ficha Médica', 'Datos Familiares', 'Facturación', 'Autorización de Imagen'];
@@ -199,14 +236,22 @@ export default function Registro() {
         errs.nombresJugador = 'Ingresa los nombres (mínimo 3 caracteres)';
       if (!formData.apellidosJugador.trim() || formData.apellidosJugador.trim().length < 3)
         errs.apellidosJugador = 'Ingresa los apellidos (mínimo 3 caracteres)';
-      if (!validarCedulaEC(formData.cedulaJugador))
-        errs.cedulaJugador = 'La cédula no es válida. Debe ser ecuatoriana de 10 dígitos con dígito verificador correcto';
+      
+      const esEcuatoriana = (formData.nacionalidad || '').trim().toUpperCase() === 'ECUATORIANA';
+      if (esEcuatoriana) {
+        if (!validarCedulaEC(formData.cedulaJugador))
+          errs.cedulaJugador = 'La cédula ecuatoriana no es válida (10 dígitos con dígito verificador correcto)';
+      } else {
+        if (!formData.cedulaJugador.trim() || formData.cedulaJugador.trim().length < 5)
+          errs.cedulaJugador = 'Ingresa el número de cédula o pasaporte (mínimo 5 caracteres)';
+      }
+
       if (!formData.fechaNacimientoJugador)
         errs.fechaNacimientoJugador = 'La fecha de nacimiento es obligatoria';
       if (!formData.genero)
         errs.genero = 'Selecciona el género';
-      if (!formData.direccion.trim() || formData.direccion.trim().length < 10)
-        errs.direccion = 'Ingresa la dirección completa (barrio, calle, número — mínimo 10 caracteres)';
+      if (!formData.direccion.trim() || formData.direccion.trim().length < 5)
+        errs.direccion = 'Ingresa la dirección completa (barrio, calle, número)';
     }
     if (s === 2) {
       if (!formData.alergias.trim()) errs.alergias = 'Indica si tiene alergias (escribe "Ninguna" si no aplica)';
@@ -229,25 +274,24 @@ export default function Registro() {
         if (!formData.cedulaPadre) errs.cedulaPadre = 'La cédula del padre es obligatoria';
         else if (!validarCedulaEC(formData.cedulaPadre)) errs.cedulaPadre = 'Cédula del padre inválida (10 dígitos, dígito verificador correcto)';
         if (!formData.telefonoPadre) errs.telefonoPadre = 'El teléfono del padre es obligatorio';
-        else if (!validarCelularEC(formData.telefonoPadre)) errs.telefonoPadre = 'El celular debe ser ecuatoriano: 09XXXXXXXX (10 dígitos)';
+        else if (!validarTelefonoEC(formData.telefonoPadre)) errs.telefonoPadre = 'Ingresa un teléfono válido (09XXXXXXXX o convencional)';
       }
       if (tieneMadre) {
         if (formData.nombresMadre.trim().length < 5) errs.nombresMadre = 'Ingresa el nombre completo de la madre';
         if (!formData.cedulaMadre) errs.cedulaMadre = 'La cédula de la madre es obligatoria';
         else if (!validarCedulaEC(formData.cedulaMadre)) errs.cedulaMadre = 'Cédula de la madre inválida (10 dígitos, dígito verificador correcto)';
         if (!formData.telefonoMadre) errs.telefonoMadre = 'El teléfono de la madre es obligatorio';
-        else if (!validarCelularEC(formData.telefonoMadre)) errs.telefonoMadre = 'El celular debe ser ecuatoriano: 09XXXXXXXX (10 dígitos)';
+        else if (!validarTelefonoEC(formData.telefonoMadre)) errs.telefonoMadre = 'Ingresa un teléfono válido (09XXXXXXXX o convencional)';
       }
     }
     if (s === 4) {
-      // Si el representante marcó "No necesito factura", omitir todas las validaciones del paso
-      if (formData.sinFactura) return {};
       if (!validarRucOCedula(formData.rucFacturacion))
         errs.rucFacturacion = 'Ingresa una cédula (10 dígitos) o RUC (13 dígitos) válido';
-      if (!validarCelularEC(formData.telefonoFacturacion))
-        errs.telefonoFacturacion = 'El teléfono debe ser celular ecuatoriano: 09XXXXXXXX (10 dígitos)';
+      if (!validarTelefonoEC(formData.telefonoFacturacion))
+        errs.telefonoFacturacion = 'Ingresa un teléfono válido (ej: 09XXXXXXXX o convencional)';
       if (!formData.nombreFacturacion.trim()) errs.nombreFacturacion = 'La razón social o nombre completo es obligatorio';
-      if (!formData.direccionFacturacion.trim()) errs.direccionFacturacion = 'La dirección de facturación es obligatoria';
+      if (!formData.direccionFacturacion.trim() || formData.direccionFacturacion.trim().length < 5)
+        errs.direccionFacturacion = 'La dirección de facturación es obligatoria';
       if (!validarEmail(formData.correoFacturacion)) errs.correoFacturacion = 'Ingresa un correo electrónico válido para facturación';
     }
     if (s === 5) {
@@ -276,88 +320,168 @@ export default function Registro() {
     if (Object.keys(errs).length > 0) return;
     setSubmitLoading(true);
     setSubmitError('');
+
     try {
       const nombreCompletoJugador = `${formData.nombresJugador.trim()} ${formData.apellidosJugador.trim()}`;
       
+      // 1. Registro o autenticación en Supabase Auth
+      let userId = null;
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email.trim(), password: formData.password,
+        email: formData.email.trim(),
+        password: formData.password,
         options: { data: { nombre: nombreCompletoJugador } },
       });
-      if (authError) {
-        if (authError.message === 'User already registered') {
-          throw new Error('Este correo electrónico ya tiene una cuenta registrada. Por favor inicia sesión con tus credenciales.');
-        }
-        throw new Error(authError.message);
-      }
-      const userId = authData.user?.id;
-      if (!userId) throw new Error('No se pudo crear la cuenta. Intenta con otro correo.');
 
+      if (authError) {
+        const msg = (authError.message || '').toLowerCase();
+        if (msg.includes('already registered') || msg.includes('user already registered')) {
+          // El usuario ya existe en Auth (por un intento previo o registro incompleto).
+          // Intentamos iniciar sesión con las credenciales que acaba de ingresar:
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: formData.email.trim(),
+            password: formData.password,
+          });
+
+          if (signInError) {
+            throw new Error(
+              'Este correo electrónico ya tiene una cuenta registrada con otra contraseña. ' +
+              'Por favor inicia sesión con tu contraseña o recupérala desde la pantalla de ingreso.'
+            );
+          }
+
+          userId = signInData.user?.id;
+
+          // Verificamos si este usuario ya tiene ficha completa registrada
+          const { data: fichaExistente } = await supabase
+            .from('fichas')
+            .select('id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (fichaExistente) {
+            // Ya tiene ficha completa: redirigir directamente al perfil
+            navigate('/perfil', { replace: true });
+            return;
+          }
+          // Si no tiene ficha, continúa el flujo para guardar su ficha con este userId
+        } else {
+          throw new Error(authError.message);
+        }
+      } else {
+        userId = authData.user?.id;
+      }
+
+      if (!userId) throw new Error('No se pudo verificar la cuenta de usuario. Intenta de nuevo.');
+
+      // 2. Subida de fotografía del deportista (opcional y no bloqueante)
       let fotoUrl = null;
       if (fotoFile) {
-        const ext = fotoFile.name.split('.').pop();
-        const filePath = `${formData.cedulaJugador.trim()}-${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from('fichas')
-          .upload(filePath, fotoFile, { upsert: true });
-
-        if (uploadError) {
-          console.warn('Advertencia: no se pudo subir la foto del deportista.', uploadError.message);
-        } else {
-          const { data: publicUrlData } = supabase.storage
+        try {
+          const ext = fotoFile.name.split('.').pop() || 'jpg';
+          const filePath = `${formData.cedulaJugador.trim()}-${Date.now()}.${ext}`;
+          const { error: uploadError } = await supabase.storage
             .from('fichas')
-            .getPublicUrl(filePath);
-            
-          fotoUrl = publicUrlData.publicUrl;
+            .upload(filePath, fotoFile, { upsert: true });
+
+          if (!uploadError) {
+            const { data: publicUrlData } = supabase.storage
+              .from('fichas')
+              .getPublicUrl(filePath);
+            fotoUrl = publicUrlData?.publicUrl || null;
+          } else {
+            console.warn('Advertencia no fatal al subir foto:', uploadError.message);
+          }
+        } catch (uErr) {
+          console.warn('Error no fatal procesando foto:', uErr);
         }
       }
 
-      const { error: insertError } = await supabase.from('fichas').insert({
-        user_id: userId, foto_url: fotoUrl,
-        nombres_jugador: sanitizeText(nombreCompletoJugador), cedula_jugador: formData.cedulaJugador.trim(),
-        fecha_nacimiento: formData.fechaNacimientoJugador, genero: formData.genero,
-        nacionalidad: sanitizeText(formData.nacionalidad.trim()), direccion: sanitizeText(formData.direccion.trim()),
-        discapacidad: formData.discapacidad, tipo_discapacidad: sanitizeText(formData.tipoDiscapacidad) || null,
+      // 3. Inserción de la ficha en la tabla 'fichas'
+      // Payload base garantizado (columnas históricas de la tabla fichas)
+      const baseFicha = {
+        user_id: userId,
+        foto_url: fotoUrl,
+        nombres_jugador: sanitizeText(nombreCompletoJugador),
+        cedula_jugador: formData.cedulaJugador.trim(),
+        fecha_nacimiento: formData.fechaNacimientoJugador,
+        genero: formData.genero,
+        nacionalidad: sanitizeText(formData.nacionalidad.trim()),
+        direccion: sanitizeText(formData.direccion.trim()),
+        discapacidad: formData.discapacidad,
+        tipo_discapacidad: sanitizeText(formData.tipoDiscapacidad) || null,
         porcentaje_discapacidad: formData.porcentajeDiscapacidad ? parseInt(formData.porcentajeDiscapacidad, 10) : null,
-        nee: formData.nee, usa_lentes: formData.usaLentes,
-        nombres_padre: sanitizeText(formData.nombresPadre) || null, cedula_padre: formData.cedulaPadre || null,
-        telefono_padre: formData.telefonoPadre || null, ocupacion_padre: sanitizeText(formData.ocupacionPadre) || null,
-        nombres_madre: sanitizeText(formData.nombresMadre) || null, cedula_madre: formData.cedulaMadre || null,
-        telefono_madre: formData.telefonoMadre || null, ocupacion_madre: sanitizeText(formData.ocupacionMadre) || null,
+        nee: formData.nee,
+        usa_lentes: formData.usaLentes,
+        nombres_padre: sanitizeText(formData.nombresPadre) || null,
+        cedula_padre: formData.cedulaPadre || null,
+        telefono_padre: formData.telefonoPadre || null,
+        ocupacion_padre: sanitizeText(formData.ocupacionPadre) || null,
+        nombres_madre: sanitizeText(formData.nombresMadre) || null,
+        cedula_madre: formData.cedulaMadre || null,
+        telefono_madre: formData.telefonoMadre || null,
+        ocupacion_madre: sanitizeText(formData.ocupacionMadre) || null,
         representante: formData.esRepresentante,
-        ruc_facturacion: formData.rucFacturacion.trim(), nombre_facturacion: sanitizeText(formData.nombreFacturacion.trim()),
-        telefono_facturacion: formData.telefonoFacturacion.trim(), direccion_facturacion: sanitizeText(formData.direccionFacturacion.trim()),
-        correo_facturacion: formData.sinFactura ? null : formData.correoFacturacion.trim(),
+        ruc_facturacion: formData.rucFacturacion.trim(),
+        nombre_facturacion: sanitizeText(formData.nombreFacturacion.trim()),
+        telefono_facturacion: formData.telefonoFacturacion.trim(),
+        direccion_facturacion: sanitizeText(formData.direccionFacturacion.trim()),
+        correo_facturacion: formData.correoFacturacion.trim(),
         autoriza_imagen: formData.autorizaImagen === 'SI',
+        firma_representante: sanitizeText(formData.firmaRepresentante.trim()),
+        fecha_autorizacion: new Date().toISOString(),
+      };
+
+      // Columnas médicas y de términos (si la BD en Supabase las tiene)
+      const camposExtendidos = {
+        alergias: sanitizeText(formData.alergias.trim()) || null,
+        lesiones: sanitizeText(formData.lesiones.trim()) || null,
+        cirugias: sanitizeText(formData.cirugias.trim()) || null,
         acepta_privacidad: formData.aceptaPrivacidad,
         acepta_compromisos: formData.aceptaCompromisos,
-        alergias: sanitizeText(formData.alergias.trim()),
-        lesiones: sanitizeText(formData.lesiones.trim()),
-        cirugias: sanitizeText(formData.cirugias.trim()),
-        firma_representante: sanitizeText(formData.firmaRepresentante.trim()), fecha_autorizacion: new Date().toISOString(),
+      };
+
+      // Primer intento: con todos los campos extendidos
+      let { error: insertError } = await supabase.from('fichas').insert({
+        ...baseFicha,
+        ...camposExtendidos,
       });
+
+      // Si falla por columna inexistente en PostgreSQL/PostgREST, reintentar de inmediato con campos base
+      if (insertError && (
+        insertError.message?.toLowerCase().includes('column') ||
+        insertError.message?.toLowerCase().includes('schema cache') ||
+        insertError.code === 'PGRST204' ||
+        insertError.code === '42703'
+      )) {
+        console.warn('Reintentando inserción en fichas solo con campos base garantizados:', insertError.message);
+        const retryResult = await supabase.from('fichas').insert(baseFicha);
+        insertError = retryResult.error;
+      }
+
       if (insertError) {
-        // La cuenta auth fue creada pero falló guardar la ficha.
-        // Iniciamos sesión para que el usuario vea el banner de registro incompleto
-        // y pueda contactar al club fácilmente.
-        await supabase.auth.signInWithPassword({
-          email: formData.email.trim(),
-          password: formData.password,
-        });
+        // Asegurar que el usuario tenga sesión para que no se quede desorientado
+        try {
+          await supabase.auth.signInWithPassword({
+            email: formData.email.trim(),
+            password: formData.password,
+          });
+        } catch (_) {}
+
         throw new Error(
-          `Hubo un problema al guardar tu ficha (${insertError.message}). ` +
-          `Tu cuenta fue creada. Por favor comunícate con el club por WhatsApp para completar tu inscripción.`
+          `Hubo un problema al registrar la ficha (${insertError.message}). ` +
+          `Tu usuario fue creado en el sistema. Puedes escribirnos por WhatsApp para asistirte de inmediato.`
         );
       }
 
-      // Insertar en miembros (para el panel Admin) — no es fatal si falla
-      const { error: miembroError } = await supabase.from('miembros').insert({
+      // 4. Inserción en 'miembros' (para el panel admin) — no es fatal si falla
+      const miembroPayload = {
         nombres: sanitizeText(nombreCompletoJugador),
         cedula: formData.cedulaJugador.trim(),
         fecha_nacimiento: formData.fechaNacimientoJugador,
         genero: formData.genero,
         nacionalidad: sanitizeText(formData.nacionalidad.trim()),
         direccion: sanitizeText(formData.direccion.trim()),
-        categoria: 'U14', // Por defecto, el admin puede ajustarlo luego
+        categoria: 'U14',
         tiene_beca: false,
         monto_pension: 55,
         tiene_discapacidad: formData.discapacidad === 'SI',
@@ -380,9 +504,23 @@ export default function Registro() {
         facturacion_telefono: formData.telefonoFacturacion.trim(),
         facturacion_correo: formData.correoFacturacion.trim(),
         foto_url: fotoUrl,
-      });
+      };
 
-      if (miembroError) console.warn('Advertencia: no se pudo crear el miembro en panel admin.', miembroError.message);
+      try {
+        const { error: miembroError } = await supabase.from('miembros').insert(miembroPayload);
+        if (miembroError) console.warn('Advertencia no fatal al registrar miembro admin:', miembroError.message);
+      } catch (mErr) {
+        console.warn('Error no fatal al registrar miembro admin:', mErr);
+      }
+
+      // 5. Asegurar que haya sesión activa antes de navegar al perfil
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        await supabase.auth.signInWithPassword({
+          email: formData.email.trim(),
+          password: formData.password,
+        });
+      }
 
       navigate('/perfil', { replace: true });
     } catch (err) {
@@ -688,68 +826,51 @@ export default function Registro() {
             {/* ════ PASO 4: FACTURACIÓN ════ */}
             {step === 4 && (
               <div className="animate-[fadeIn_0.3s_ease-in-out]">
-                <h3 className="text-xl font-bold text-gray-800 border-b border-gray-200 pb-3 mb-4">Paso 4: Datos para Facturación</h3>
-
-                {/* Toggle: sin factura */}
-                <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer mb-6 transition-colors"
-                  style={{ borderColor: formData.sinFactura ? '#f97316' : '#e5e7eb', background: formData.sinFactura ? '#fff7ed' : '#f9fafb' }}>
-                  <input
-                    type="checkbox"
-                    name="sinFactura"
-                    checked={formData.sinFactura}
-                    onChange={handleChange}
-                    className="mt-0.5 w-5 h-5 accent-orange-500 shrink-0 cursor-pointer"
-                    id="sinFactura"
-                  />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-3 mb-4">
                   <div>
-                    <p className="font-bold text-gray-800 text-sm leading-snug">No necesito factura electrónica</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Marca esta opción si no requieres comprobante de pago electrónico. Podrás solicitarlo más adelante en tu perfil.
-                    </p>
+                    <h3 className="text-xl font-bold text-gray-800">Paso 4: Datos para Facturación</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Estos datos aparecerán en los comprobantes y facturas electrónicas del club.</p>
                   </div>
-                </label>
+                  <button
+                    type="button"
+                    onClick={handleCopiarDatosFacturacion}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-600 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors self-start sm:self-auto shrink-0 shadow-sm"
+                    title="Copia automáticamente los datos del representante legal"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                    Copiar datos del representante
+                  </button>
+                </div>
 
-                {/* Campos de facturación — visibles solo si NO marcó sinFactura */}
-                {!formData.sinFactura && (
-                  <>
-                    <p className="text-sm text-gray-500 mb-4">Estos datos aparecerán en los comprobantes y facturas de pago del club.</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Field label="Cédula o RUC" error={fieldErrors.rucFacturacion} required>
-                        <input type="text" name="rucFacturacion" value={formData.rucFacturacion} onChange={handleChange}
-                          placeholder="Cédula (10 dígitos) o RUC (13 dígitos)" maxLength={13} className={ic('rucFacturacion')} />
-                        <p className="text-xs text-gray-400 mt-1">Se verifica el dígito del Registro Civil / SRI</p>
-                      </Field>
-                      <Field label="Teléfono de Contacto" error={fieldErrors.telefonoFacturacion} required>
-                        <input type="tel" name="telefonoFacturacion" value={formData.telefonoFacturacion} onChange={handleChange}
-                          placeholder="09XXXXXXXX" maxLength={10} className={ic('telefonoFacturacion')} />
-                      </Field>
-                      <div className="md:col-span-2">
-                        <Field label="Razón Social / Nombre Completo" error={fieldErrors.nombreFacturacion} required>
-                          <input type="text" name="nombreFacturacion" value={formData.nombreFacturacion} onChange={handleChange} className={ic('nombreFacturacion')} />
-                        </Field>
-                      </div>
-                      <div className="md:col-span-2">
-                        <Field label="Dirección de Facturación" error={fieldErrors.direccionFacturacion} required>
-                          <input type="text" name="direccionFacturacion" value={formData.direccionFacturacion} onChange={handleChange} className={ic('direccionFacturacion')} />
-                        </Field>
-                      </div>
-                      <div className="md:col-span-2">
-                        <Field label="Correo para envío de facturas" error={fieldErrors.correoFacturacion} required>
-                          <input type="email" name="correoFacturacion" value={formData.correoFacturacion} onChange={handleChange}
-                            placeholder="facturacion@correo.com" className={ic('correoFacturacion')} />
-                        </Field>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Mensaje informativo si eligió sin factura */}
-                {formData.sinFactura && (
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-orange-50 border border-orange-200 text-orange-800 text-sm">
-                    <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5">info</span>
-                    <p>Continuarás sin datos de facturación. Si en el futuro necesitas factura, puedes completar estos datos desde tu perfil o solicitarlos directamente en la secretaría del club.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Cédula o RUC" error={fieldErrors.rucFacturacion} required>
+                    <input type="text" name="rucFacturacion" value={formData.rucFacturacion} onChange={handleChange}
+                      placeholder="Cédula (10 dígitos) o RUC (13 dígitos)" maxLength={13} className={ic('rucFacturacion')} />
+                    <p className="text-xs text-gray-400 mt-1">Se verifica el dígito del Registro Civil / SRI</p>
+                  </Field>
+                  <Field label="Teléfono de Contacto" error={fieldErrors.telefonoFacturacion} required>
+                    <input type="tel" name="telefonoFacturacion" value={formData.telefonoFacturacion} onChange={handleChange}
+                      placeholder="09XXXXXXXX o convencional" maxLength={15} className={ic('telefonoFacturacion')} />
+                  </Field>
+                  <div className="md:col-span-2">
+                    <Field label="Razón Social / Nombre Completo" error={fieldErrors.nombreFacturacion} required>
+                      <input type="text" name="nombreFacturacion" value={formData.nombreFacturacion} onChange={handleChange}
+                        placeholder="Nombres y apellidos o razón social" className={ic('nombreFacturacion')} />
+                    </Field>
                   </div>
-                )}
+                  <div className="md:col-span-2">
+                    <Field label="Dirección de Facturación" error={fieldErrors.direccionFacturacion} required>
+                      <input type="text" name="direccionFacturacion" value={formData.direccionFacturacion} onChange={handleChange}
+                        placeholder="Dirección fiscal para la factura" className={ic('direccionFacturacion')} />
+                    </Field>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Field label="Correo para envío de facturas" error={fieldErrors.correoFacturacion} required>
+                      <input type="email" name="correoFacturacion" value={formData.correoFacturacion} onChange={handleChange}
+                        placeholder="facturacion@correo.com" className={ic('correoFacturacion')} />
+                    </Field>
+                  </div>
+                </div>
               </div>
             )}
 

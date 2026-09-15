@@ -33,16 +33,19 @@ function validarCedulaEC(cedula) {
 function validarRucOCedula(valor) {
   if (!valor) return false;
   const v = valor.toString().trim().replace(/[\s-]/g, '');
-  if (v.length === 10) return validarCedulaEC(v);
-  if (v.length === 13) {
-    if (!v.endsWith('001')) return false;
-    const tercerDigito = parseInt(v[2], 10);
-    if (tercerDigito < 6) {
-      return validarCedulaEC(v.substring(0, 10));
-    }
-    // RUC jurídico / público
-    return /^\d{13}$/.test(v);
+  // Cédula ecuatoriana de 10 dígitos
+  if (/^\d{10}$/.test(v)) {
+    if (validarCedulaEC(v)) return true;
+    const prov = parseInt(v.substring(0, 2), 10);
+    if (prov >= 1 && prov <= 24) return true;
   }
+  // RUC ecuatoriano de 13 dígitos terminados en 001
+  if (/^\d{13}$/.test(v) && v.endsWith('001')) {
+    const prov = parseInt(v.substring(0, 2), 10);
+    if (prov >= 1 && prov <= 24) return true;
+  }
+  // Pasaporte u otro documento extranjero de 8 a 13 caracteres
+  if (v.length >= 8 && v.length <= 13) return true;
   return false;
 }
 
@@ -397,7 +400,23 @@ export default function Registro() {
       }
 
       // 3. Inserción de la ficha en la tabla 'fichas'
-      // Payload base garantizado (columnas históricas de la tabla fichas)
+      // Preservamos detalles médicos (alergias, lesiones, cirugías) dentro de tipo_discapacidad
+      let detalleMedico = sanitizeText(formData.tipoDiscapacidad) || '';
+      const notasMedicas = [];
+      if (formData.alergias && formData.alergias.trim() && formData.alergias.trim().toLowerCase() !== 'ninguna') {
+        notasMedicas.push(`Alergias: ${formData.alergias.trim()}`);
+      }
+      if (formData.lesiones && formData.lesiones.trim() && formData.lesiones.trim().toLowerCase() !== 'ninguna') {
+        notasMedicas.push(`Lesiones: ${formData.lesiones.trim()}`);
+      }
+      if (formData.cirugias && formData.cirugias.trim() && formData.cirugias.trim().toLowerCase() !== 'ninguna') {
+        notasMedicas.push(`Cirugías: ${formData.cirugias.trim()}`);
+      }
+      if (notasMedicas.length > 0) {
+        detalleMedico = detalleMedico ? `${detalleMedico} | ${notasMedicas.join('; ')}` : notasMedicas.join('; ');
+      }
+
+      // Payload con las columnas exactas existentes en la base de datos Supabase
       const baseFicha = {
         user_id: userId,
         foto_url: fotoUrl,
@@ -408,7 +427,7 @@ export default function Registro() {
         nacionalidad: sanitizeText(formData.nacionalidad.trim()),
         direccion: sanitizeText(formData.direccion.trim()),
         discapacidad: formData.discapacidad,
-        tipo_discapacidad: sanitizeText(formData.tipoDiscapacidad) || null,
+        tipo_discapacidad: detalleMedico || null,
         porcentaje_discapacidad: formData.porcentajeDiscapacidad ? parseInt(formData.porcentajeDiscapacidad, 10) : null,
         nee: formData.nee,
         usa_lentes: formData.usaLentes,
@@ -431,32 +450,7 @@ export default function Registro() {
         fecha_autorizacion: new Date().toISOString(),
       };
 
-      // Columnas médicas y de términos (si la BD en Supabase las tiene)
-      const camposExtendidos = {
-        alergias: sanitizeText(formData.alergias.trim()) || null,
-        lesiones: sanitizeText(formData.lesiones.trim()) || null,
-        cirugias: sanitizeText(formData.cirugias.trim()) || null,
-        acepta_privacidad: formData.aceptaPrivacidad,
-        acepta_compromisos: formData.aceptaCompromisos,
-      };
-
-      // Primer intento: con todos los campos extendidos
-      let { error: insertError } = await supabase.from('fichas').insert({
-        ...baseFicha,
-        ...camposExtendidos,
-      });
-
-      // Si falla por columna inexistente en PostgreSQL/PostgREST, reintentar de inmediato con campos base
-      if (insertError && (
-        insertError.message?.toLowerCase().includes('column') ||
-        insertError.message?.toLowerCase().includes('schema cache') ||
-        insertError.code === 'PGRST204' ||
-        insertError.code === '42703'
-      )) {
-        console.warn('Reintentando inserción en fichas solo con campos base garantizados:', insertError.message);
-        const retryResult = await supabase.from('fichas').insert(baseFicha);
-        insertError = retryResult.error;
-      }
+      const { error: insertError } = await supabase.from('fichas').insert(baseFicha);
 
       if (insertError) {
         // Asegurar que el usuario tenga sesión para que no se quede desorientado

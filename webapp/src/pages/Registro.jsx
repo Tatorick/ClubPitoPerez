@@ -164,6 +164,7 @@ export default function Registro() {
     // Paso 2
     discapacidad: 'NO', tipoDiscapacidad: '', porcentajeDiscapacidad: '',
     nee: 'NO', usaLentes: 'NO',
+    alergias: '', lesiones: '', cirugias: '',
     // Paso 3
     nombresPadre: '', cedulaPadre: '', telefonoPadre: '', ocupacionPadre: '',
     nombresMadre: '', cedulaMadre: '', telefonoMadre: '', ocupacionMadre: '',
@@ -173,7 +174,7 @@ export default function Registro() {
     rucFacturacion: '', nombreFacturacion: '', direccionFacturacion: '',
     telefonoFacturacion: '', correoFacturacion: '',
     // Paso 5
-    autorizaImagen: '', firmaRepresentante: '', leyoAutorizacion: false,
+    autorizaImagen: '', firmaRepresentante: '', leyoAutorizacion: false, aceptaPrivacidad: false, aceptaCompromisos: false,
   });
 
   const handleChange = (e) => {
@@ -208,6 +209,9 @@ export default function Registro() {
         errs.direccion = 'Ingresa la dirección completa (barrio, calle, número — mínimo 10 caracteres)';
     }
     if (s === 2) {
+      if (!formData.alergias.trim()) errs.alergias = 'Indica si tiene alergias (escribe "Ninguna" si no aplica)';
+      if (!formData.lesiones.trim()) errs.lesiones = 'Indica si tiene lesiones previas (escribe "Ninguna" si no aplica)';
+      if (!formData.cirugias.trim()) errs.cirugias = 'Indica si tiene cirugías previas (escribe "Ninguna" si no aplica)';
       if (formData.discapacidad === 'SI') {
         if (!formData.tipoDiscapacidad.trim()) errs.tipoDiscapacidad = 'Especifica el tipo de discapacidad';
         const pct = parseInt(formData.porcentajeDiscapacidad, 10);
@@ -251,6 +255,8 @@ export default function Registro() {
       if (!formData.firmaRepresentante.trim() || formData.firmaRepresentante.trim().length < 5)
         errs.firmaRepresentante = 'Ingresa el nombre completo del representante legal que autoriza';
       if (!formData.leyoAutorizacion) errs.leyoAutorizacion = 'Debes confirmar que has leído y comprendido la autorización';
+      if (!formData.aceptaPrivacidad) errs.aceptaPrivacidad = 'Debes aceptar la política de tratamiento de datos personales';
+      if (!formData.aceptaCompromisos) errs.aceptaCompromisos = 'Debes aceptar el reglamento y los compromisos del club';
     }
     return errs;
   };
@@ -315,8 +321,13 @@ export default function Registro() {
         representante: formData.esRepresentante,
         ruc_facturacion: formData.rucFacturacion.trim(), nombre_facturacion: sanitizeText(formData.nombreFacturacion.trim()),
         telefono_facturacion: formData.telefonoFacturacion.trim(), direccion_facturacion: sanitizeText(formData.direccionFacturacion.trim()),
-        correo_facturacion: formData.correoFacturacion.trim(),
+        correo_facturacion: formData.sinFactura ? null : formData.correoFacturacion.trim(),
         autoriza_imagen: formData.autorizaImagen === 'SI',
+        acepta_privacidad: formData.aceptaPrivacidad,
+        acepta_compromisos: formData.aceptaCompromisos,
+        alergias: sanitizeText(formData.alergias.trim()),
+        lesiones: sanitizeText(formData.lesiones.trim()),
+        cirugias: sanitizeText(formData.cirugias.trim()),
         firma_representante: sanitizeText(formData.firmaRepresentante.trim()), fecha_autorizacion: new Date().toISOString(),
       });
       if (insertError) throw new Error(`Error al guardar la ficha: ${insertError.message}`);
@@ -539,6 +550,24 @@ export default function Registro() {
                     </select>
                   </Field>
                 </div>
+                
+                <h4 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 mt-6 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">medical_information</span> Historial Médico
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Field label="Alergias (Escribe 'Ninguna' si no tiene)" error={fieldErrors.alergias} required>
+                    <input type="text" name="alergias" value={formData.alergias} onChange={handleChange}
+                      placeholder="Ej: Penicilina, Ninguna" className={ic('alergias')} />
+                  </Field>
+                  <Field label="Lesiones previas" error={fieldErrors.lesiones} required>
+                    <input type="text" name="lesiones" value={formData.lesiones} onChange={handleChange}
+                      placeholder="Ej: Esguince tobillo, Ninguna" className={ic('lesiones')} />
+                  </Field>
+                  <Field label="Cirugías previas" error={fieldErrors.cirugias} required>
+                    <input type="text" name="cirugias" value={formData.cirugias} onChange={handleChange}
+                      placeholder="Ej: Apendicitis, Ninguna" className={ic('cirugias')} />
+                  </Field>
+                </div>
               </div>
             )}
 
@@ -697,7 +726,7 @@ export default function Registro() {
                   <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-white text-[22px]">policy</span>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800">Paso 5: Autorización de Uso de Imagen</h3>
+                  <h3 className="text-xl font-bold text-gray-800">Paso 5: Términos, Privacidad y Autorizaciones</h3>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mb-6">
                   <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded uppercase tracking-wider">
@@ -777,7 +806,7 @@ export default function Registro() {
                   </p>
                 </Field>
 
-                <div className="mt-4">
+                <div className="mt-4 space-y-3">
                   <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.leyoAutorizacion ? 'border-blue-500 bg-blue-50' : fieldErrors.leyoAutorizacion ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}>
                     <input type="checkbox" name="leyoAutorizacion" checked={formData.leyoAutorizacion} onChange={handleChange}
                       className="mt-0.5 accent-blue-600 w-4 h-4 shrink-0" />
@@ -791,6 +820,56 @@ export default function Registro() {
                     <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">error</span>
                       {fieldErrors.leyoAutorizacion}
+                    </p>
+                  )}
+
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm text-gray-700 leading-relaxed space-y-2 mt-4">
+                    <p className="font-bold text-gray-900 text-base">TRATAMIENTO DE DATOS PERSONALES (LOPDP)</p>
+                    <p>De conformidad con la Ley Orgánica de Protección de Datos Personales de Ecuador, el Club Pito Pérez garantiza la absoluta confidencialidad de la información registrada (datos de identidad, médicos y familiares).</p>
+                    <p><strong>Fines del Tratamiento:</strong> Toda la información aquí recopilada será utilizada estrictamente para:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Fines deportivos (gestión de categorías, inscripciones a torneos).</li>
+                      <li>Prevención y cuidado de la salud del deportista (fichas médicas).</li>
+                      <li>Gestión administrativa y facturación.</li>
+                    </ul>
+                    <p>Sus datos no serán vendidos, cedidos ni compartidos con terceros comerciales ajenos a la actividad deportiva del club.</p>
+                  </div>
+
+                  <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all mt-3 ${formData.aceptaPrivacidad ? 'border-blue-500 bg-blue-50' : fieldErrors.aceptaPrivacidad ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}>
+                    <input type="checkbox" name="aceptaPrivacidad" checked={formData.aceptaPrivacidad} onChange={handleChange}
+                      className="mt-0.5 accent-blue-600 w-4 h-4 shrink-0" />
+                    <span className="text-sm text-gray-700">
+                      <strong>Consiento el tratamiento de mis datos personales y los del menor representado</strong>, exclusivamente para los fines deportivos, médicos y administrativos del club, conforme a la política de privacidad expuesta.
+                    </span>
+                  </label>
+                  {fieldErrors.aceptaPrivacidad && (
+                    <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">error</span>
+                      {fieldErrors.aceptaPrivacidad}
+                    </p>
+                  )}
+
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 text-sm text-gray-700 leading-relaxed space-y-2 mt-6">
+                    <p className="font-bold text-orange-900 text-base">REGLAMENTO Y COMPROMISOS DEL CLUB</p>
+                    <p>Al inscribir al deportista en el Club Pito Pérez, el representante legal acepta y se compromete a cumplir las siguientes normativas:</p>
+                    <ul className="list-disc pl-5 space-y-2 mt-2">
+                      <li><strong>Indumentaria:</strong> Asistir a entrenamientos y competencias exclusivamente con la indumentaria oficial del club. Está estrictamente prohibido el uso de indumentaria de otros clubes en actividades oficiales.</li>
+                      <li><strong>Pagos puntuales:</strong> Cancelar las pensiones mensuales durante los primeros 5 días de cada mes.</li>
+                      <li><strong>Exclusividad:</strong> El deportista tiene prohibido entrenar, jugar o representar a otros clubes o academias sin una autorización formal previa o sin haber realizado el trámite de pase correspondiente con nuestra institución.</li>
+                    </ul>
+                  </div>
+
+                  <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all mt-3 ${formData.aceptaCompromisos ? 'border-orange-500 bg-orange-50' : fieldErrors.aceptaCompromisos ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}>
+                    <input type="checkbox" name="aceptaCompromisos" checked={formData.aceptaCompromisos} onChange={handleChange}
+                      className="mt-0.5 accent-orange-600 w-4 h-4 shrink-0" />
+                    <span className="text-sm text-gray-700">
+                      <strong>Acepto y me comprometo a cumplir con el reglamento,</strong> políticas de pago, uso de indumentaria y exclusividad del club mencionados arriba.
+                    </span>
+                  </label>
+                  {fieldErrors.aceptaCompromisos && (
+                    <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">error</span>
+                      {fieldErrors.aceptaCompromisos}
                     </p>
                   )}
                 </div>

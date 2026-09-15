@@ -448,46 +448,45 @@ export default function Perfil() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const avatarFileRef = useRef(null);
 
-  // Cargar datos del usuario desde Supabase — queries en paralelo
+  // Cargar datos del usuario desde Supabase
+  // Estrategia: primero obtenemos la ficha (vinculada al user_id de auth),
+  // luego buscamos el miembro por cédula (más confiable). Solo si no hay
+  // ficha ni cédula usamos el email como último recurso.
   const loadAthleteData = async () => {
     if (!user) return;
     setLoading(true);
 
     try {
-      // Query 1: ficha del deportista (por user_id)
-      // Query 2: miembro por email (fallback si no hay cédula aún)
-      const fichaPromise = supabase
+      // Paso 1: obtener la ficha del deportista por user_id
+      const { data: ficha } = await supabase
         .from('fichas')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const memberByEmailPromise = user.email
-        ? supabase
-            .from('miembros')
-            .select('*, transacciones(*)')
-            .eq('facturacion_correo', user.email)
-            .maybeSingle()
-        : Promise.resolve({ data: null });
-
-      // Ejecutar en paralelo
-      const [{ data: ficha }, { data: memByEmail }] = await Promise.all([
-        fichaPromise,
-        memberByEmailPromise,
-      ]);
-
       setFichaData(ficha || null);
 
-      // Si tenemos cédula, buscamos por cédula (más exacto)
-      let member = memByEmail;
+      let member = null;
       const cedula = ficha?.cedula_jugador;
+
       if (cedula) {
+        // Paso 2a: buscar miembro por cédula (fuente más confiable)
         const { data: memByCed } = await supabase
           .from('miembros')
           .select('*, transacciones(*)')
           .eq('cedula', cedula)
           .maybeSingle();
-        if (memByCed) member = memByCed;
+        member = memByCed || null;
+      }
+
+      // Paso 2b: fallback — buscar por email de la cuenta (solo si no encontramos por cédula)
+      if (!member && user.email) {
+        const { data: memByEmail } = await supabase
+          .from('miembros')
+          .select('*, transacciones(*)')
+          .eq('facturacion_correo', user.email)
+          .maybeSingle();
+        member = memByEmail || null;
       }
 
       setMiembroData(member);
@@ -607,9 +606,47 @@ export default function Perfil() {
     );
   }
 
+  // ── Guardia: usuario autenticado sin ficha (registro incompleto) ──────────────
+  const sinFicha = !loading && !fichaData && !miembroData;
+
   return (
     <div className="bg-[#f8f9fa] text-gray-800 min-h-screen py-8 px-margin-mobile md:px-margin-desktop font-body-md">
       <div className="max-w-container-max mx-auto space-y-8">
+
+        {/* ⚠️ Banner: registro incompleto (auth OK pero sin ficha en BD) */}
+        {sinFicha && (
+          <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-400 flex items-start gap-4 shadow-sm animate-[fadeIn_0.3s_ease-out]">
+            <span className="material-symbols-outlined text-amber-500 text-3xl shrink-0 mt-0.5">warning</span>
+            <div className="flex-1">
+              <p className="font-bold text-amber-800 text-base mb-1">Tu registro está incompleto</p>
+              <p className="text-sm text-amber-700 leading-relaxed">
+                Tu cuenta fue creada correctamente, pero no encontramos tu ficha de inscripción en nuestra base de datos.
+                Esto puede ocurrir si hubo un problema de conexión al completar el último paso del registro.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <a
+                  href="https://wa.me/593995104405"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[18px]">chat</span>
+                  Contactar al club por WhatsApp
+                </a>
+                <Link
+                  to="/registro"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-amber-400 text-amber-700 text-sm font-bold hover:bg-amber-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">edit_document</span>
+                  Intentar registro nuevamente
+                </Link>
+              </div>
+              <p className="text-xs text-amber-600 mt-3">
+                📧 Tu correo registrado: <strong>{user?.email}</strong>
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Notificación flotante de éxito */}
         {notification && (
@@ -922,7 +959,7 @@ export default function Perfil() {
                 <div>
                   <span className="text-gray-400 font-medium block">Cédula de Identidad:</span>
                   <span className="font-semibold text-gray-700">
-                    {fichaData?.cedula_jugador || miembroData?.cedula || '0104567896'}
+                    {fichaData?.cedula_jugador || miembroData?.cedula || 'Sin registrar'}
                   </span>
                 </div>
 
@@ -943,23 +980,25 @@ export default function Perfil() {
                 <div>
                   <span className="text-gray-400 font-medium block">Representante Legal:</span>
                   <span className="font-semibold text-gray-700">
-                    {fichaData?.firma_representante || fichaData?.nombres_madre || miembroData?.madre_nombres || 'Elena Andrade Rivera'}
+                    {fichaData?.firma_representante || fichaData?.nombres_madre || miembroData?.madre_nombres || 'Sin registrar'}
                   </span>
                 </div>
 
                 <div>
                   <span className="text-gray-400 font-medium block">Teléfono de Contacto:</span>
                   <span className="font-semibold text-gray-700">
-                    {fichaData?.telefono_madre || fichaData?.telefono_facturacion || '0991234567'}
+                    {fichaData?.telefono_madre || miembroData?.madre_telefono || fichaData?.telefono_facturacion || 'Sin registrar'}
                   </span>
                 </div>
 
-                <div className="pt-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-green-100 text-green-800 border border-green-200">
-                    <span className="material-symbols-outlined text-[14px]">policy</span>
-                    Autorización de Imagen Activa (MinEduc)
-                  </span>
-                </div>
+                {(fichaData?.autoriza_imagen || miembroData?.autoriza_imagen) && (
+                  <div className="pt-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-green-100 text-green-800 border border-green-200">
+                      <span className="material-symbols-outlined text-[14px]">policy</span>
+                      Autorización de Imagen Activa (MinEduc)
+                    </span>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -993,7 +1032,7 @@ export default function Perfil() {
       {showUploadModal && (
         <UploadPaymentModal
           mesesStatus={mesesStatus}
-          miembroId={miembroData?.id || 'eb371423-6312-4006-81d7-d7f4d319fed2'}
+          miembroId={miembroData?.id}
           onClose={() => setShowUploadModal(false)}
           onSuccess={handlePaymentSuccess}
         />

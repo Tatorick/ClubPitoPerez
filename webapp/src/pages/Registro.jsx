@@ -283,7 +283,12 @@ export default function Registro() {
         email: formData.email.trim(), password: formData.password,
         options: { data: { nombre: nombreCompletoJugador } },
       });
-      if (authError) throw new Error(authError.message);
+      if (authError) {
+        if (authError.message === 'User already registered') {
+          throw new Error('Este correo electrónico ya tiene una cuenta registrada. Por favor inicia sesión con tus credenciales.');
+        }
+        throw new Error(authError.message);
+      }
       const userId = authData.user?.id;
       if (!userId) throw new Error('No se pudo crear la cuenta. Intenta con otro correo.');
 
@@ -330,9 +335,21 @@ export default function Registro() {
         cirugias: sanitizeText(formData.cirugias.trim()),
         firma_representante: sanitizeText(formData.firmaRepresentante.trim()), fecha_autorizacion: new Date().toISOString(),
       });
-      if (insertError) throw new Error(`Error al guardar la ficha: ${insertError.message}`);
+      if (insertError) {
+        // La cuenta auth fue creada pero falló guardar la ficha.
+        // Iniciamos sesión para que el usuario vea el banner de registro incompleto
+        // y pueda contactar al club fácilmente.
+        await supabase.auth.signInWithPassword({
+          email: formData.email.trim(),
+          password: formData.password,
+        });
+        throw new Error(
+          `Hubo un problema al guardar tu ficha (${insertError.message}). ` +
+          `Tu cuenta fue creada. Por favor comunícate con el club por WhatsApp para completar tu inscripción.`
+        );
+      }
 
-      // Insertar automáticamente en la tabla miembros para que aparezca en el Admin
+      // Insertar en miembros (para el panel Admin) — no es fatal si falla
       const { error: miembroError } = await supabase.from('miembros').insert({
         nombres: sanitizeText(nombreCompletoJugador),
         cedula: formData.cedulaJugador.trim(),
@@ -364,8 +381,8 @@ export default function Registro() {
         facturacion_correo: formData.correoFacturacion.trim(),
         foto_url: fotoUrl,
       });
-      
-      if (miembroError) console.warn('Advertencia: no se pudo crear el miembro.', miembroError.message);
+
+      if (miembroError) console.warn('Advertencia: no se pudo crear el miembro en panel admin.', miembroError.message);
 
       navigate('/perfil', { replace: true });
     } catch (err) {
@@ -429,6 +446,23 @@ export default function Registro() {
               <div>
                 <p className="font-bold mb-0.5">Error al completar el registro</p>
                 <p>{submitError}</p>
+                {submitError.includes('ya tiene una cuenta registrada') && (
+                  <Link to="/login" className="inline-flex items-center gap-1 mt-2 font-bold text-orange-600 hover:text-orange-800 underline">
+                    <span className="material-symbols-outlined text-[16px]">login</span>
+                    Ir a Iniciar Sesión
+                  </Link>
+                )}
+                {submitError.includes('comunícate con el club') && (
+                  <a
+                    href="https://wa.me/593995104405"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 mt-2 font-bold text-green-700 hover:text-green-900 underline"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">chat</span>
+                    Contactar al club por WhatsApp
+                  </a>
+                )}
               </div>
             </div>
           )}

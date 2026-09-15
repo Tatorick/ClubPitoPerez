@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { BLOG_POSTS, CATEGORIAS } from '../data/blogData';
 import { ALBUMES } from '../data/galeriaData';
-import heroImg from '../assets/hero1.JPG';
+import heroImg from '../assets/hero2.JPG';
 import kevinImg from '../assets/Kevin.JPG';
 import marcosImg from '../assets/Marcos.JPG';
 

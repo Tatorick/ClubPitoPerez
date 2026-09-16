@@ -180,12 +180,16 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose, onAprobar, onRechazar 
 export function FacturaBadge({ estado, url_ride, onReintentar }) {
   if (!estado || estado === 'pendiente') return null;
 
+  // Normalizar el estado por si hay registros antiguos con 'autorizado'
+  const estadoNormalizado = estado === 'autorizado' ? 'autorizada' : estado;
+
   const configs = {
     procesando: { bg: 'bg-amber-50 border-amber-200 text-amber-700', icon: 'progress_activity', label: 'Procesando...', spin: true },
     autorizada:  { bg: 'bg-green-50 border-green-200 text-green-700', icon: 'check_circle', label: 'Factura autorizada', spin: false },
     rechazada:   { bg: 'bg-red-50 border-red-200 text-red-700',       icon: 'cancel', label: 'Rechazada por SRI', spin: false },
+    devuelta:    { bg: 'bg-orange-50 border-orange-200 text-orange-700', icon: 'warning', label: 'Devuelta por SRI', spin: false },
   };
-  const c = configs[estado] || configs.procesando;
+  const c = configs[estadoNormalizado] || configs.procesando;
 
   return (
     <div className={`flex items-center gap-2 mt-1 flex-wrap`}>

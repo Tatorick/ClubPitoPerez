@@ -496,7 +496,7 @@ function PagosTab({ member, onUpdateMember }) {
       const updatedTxns = (member.transacciones || []).map(t =>
         t.id === txn.id ? {
           ...t,
-          estado_factura: 'autorizado',
+          estado_factura: 'autorizada',
           factura_id: resFactura.numeroDocumento,
           factura_pdf: resFactura.pdf,
           factura_xml: resFactura.xml
@@ -525,7 +525,7 @@ function PagosTab({ member, onUpdateMember }) {
       const updatedTxns = (member.transacciones || []).map(t =>
         t.id === txn.id ? {
           ...t,
-          estado_factura: 'autorizado',
+          estado_factura: 'autorizada',
           factura_id: resFactura.numeroDocumento,
           factura_pdf: resFactura.pdf,
           factura_xml: resFactura.xml

@@ -33,6 +33,17 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {(transaccion.factura_pdf || transaccion.facturas?.url_ride) && (
+              <a
+                href={transaccion.factura_pdf || transaccion.facturas?.url_ride}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                Factura SRI
+              </a>
+            )}
             {transaccion.comprobante_url && (
               <a
                 href={transaccion.comprobante_url}
@@ -42,7 +53,7 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/20 text-white text-xs font-semibold hover:bg-white/30 transition-colors"
               >
                 <span className="material-symbols-outlined text-[16px]">download</span>
-                Descargar
+                Comprobante
               </a>
             )}
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors">
@@ -854,10 +865,17 @@ export default function Perfil() {
                         </span>
                       )}
                       {isPaid && (
-                        <span className="text-[9px] font-semibold text-blue-700 bg-white/80 px-1.5 py-0.5 rounded border border-blue-200 flex items-center gap-0.5">
-                          <span className="material-symbols-outlined text-[10px]">receipt</span>
-                          Ver
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-semibold text-blue-700 bg-white/80 px-1.5 py-0.5 rounded border border-blue-200 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[10px]">receipt</span>
+                            Ver
+                          </span>
+                          {(mes.transaccion?.factura_pdf || mes.transaccion?.facturas?.url_ride) && (
+                            <span className="text-[9px] font-semibold text-green-700 bg-green-50 px-1 py-0.5 rounded border border-green-200 flex items-center" title="Factura SRI disponible">
+                              <span className="material-symbols-outlined text-[10px]">receipt_long</span>
+                            </span>
+                          )}
+                        </div>
                       )}
                       {isRechazado && (
                         <span className="text-[9px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 flex items-center gap-0.5">

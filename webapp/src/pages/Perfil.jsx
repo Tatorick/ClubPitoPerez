@@ -103,7 +103,7 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose }) {
 }
 
 // ── Modal Ultra Rápido para Subir Comprobante de Pago ─────────────────────────
-function UploadPaymentModal({ mesesStatus, miembroId, onClose, onSuccess }) {
+function UploadPaymentModal({ mesesStatus, miembroId, hayPendientes, onClose, onSuccess }) {
   const fileRef = useRef(null);
   const cameraRef = useRef(null);
   const [fotoFile, setFotoFile] = useState(null);
@@ -1051,6 +1051,7 @@ export default function Perfil() {
         <UploadPaymentModal
           mesesStatus={mesesStatus}
           miembroId={miembroData?.id}
+          hayPendientes={transacciones.some(t => t.estado_verificacion === 'pendiente_verificacion')}
           onClose={() => setShowUploadModal(false)}
           onSuccess={handlePaymentSuccess}
         />

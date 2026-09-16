@@ -17,16 +17,24 @@ const ESTADO_CONFIG = {
 };
 
 // ─── Visor de Comprobante (con acciones de verificación para admin) ─────────────
-function ReceiptViewer({ transaccion, mesCodigo, onClose, onAprobar, onRechazar }) {
+function ReceiptViewer({ transaccion, mesCodigo, hayOtrasPendientes, onClose, onAprobar, onRechazar }) {
   const [accionLoading, setAccionLoading] = useState(null); // 'aprobar' | 'rechazar'
   const [notaRechazo, setNotaRechazo] = useState('');
   const [showRechazoInput, setShowRechazoInput] = useState(false);
+  const [montoEdit, setMontoEdit] = useState(transaccion.monto_real || '');
+  const [mesesEdit, setMesesEdit] = useState((transaccion.meses_cubiertos || []).join(', '));
+  const [isEditing, setIsEditing] = useState(false);
 
   const esPendiente = transaccion.estado_verificacion === 'pendiente_verificacion';
 
   const handleAprobar = async () => {
     setAccionLoading('aprobar');
-    await onAprobar(transaccion);
+    const updates = {};
+    if (isEditing) {
+      updates.monto_real = parseFloat(montoEdit) || transaccion.monto_real;
+      updates.meses_cubiertos = mesesEdit.split(',').map(m => m.trim()).filter(Boolean);
+    }
+    await onAprobar(transaccion, updates);
     setAccionLoading(null);
     onClose();
   };
@@ -85,20 +93,67 @@ function ReceiptViewer({ transaccion, mesCodigo, onClose, onAprobar, onRechazar 
         )}
 
         {/* Meses cubiertos por esta transacción */}
-        <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Meses cubiertos por este pago</p>
-          <div className="flex gap-2 flex-wrap">
-            {transaccion.meses_cubiertos?.map(cod => (
-              <span key={cod}
-                className={`px-3 py-1 rounded-full text-xs font-bold border ${cod === mesCodigo ? 'bg-[#001f3f] text-white border-[#001f3f]' : 'bg-white text-gray-600 border-gray-300'}`}>
-                {cod}
-              </span>
-            ))}
+        <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex justify-between items-start">
+          <div className="flex-1">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Meses cubiertos por este pago</p>
+            {!isEditing ? (
+              <div className="flex gap-2 flex-wrap">
+                {(transaccion.meses_cubiertos || []).map(cod => (
+                  <span key={cod}
+                    className={`px-3 py-1 rounded-full text-xs font-bold border ${cod === mesCodigo ? 'bg-[#001f3f] text-white border-[#001f3f]' : 'bg-white text-gray-600 border-gray-300'}`}>
+                    {cod}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <input 
+                type="text" 
+                value={mesesEdit} 
+                onChange={e => setMesesEdit(e.target.value)}
+                placeholder="Ej: MAT, Sep, Oct"
+                className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
+            
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-4 mb-2">Monto del Pago</p>
+            {!isEditing ? (
+              <p className="text-sm font-bold text-gray-800">${Number(transaccion.monto_real).toFixed(2)}</p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 font-bold">$</span>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  value={montoEdit} 
+                  onChange={e => setMontoEdit(e.target.value)}
+                  className="w-32 text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
+            
+            {transaccion.notas && (
+              <p className="text-xs text-gray-500 mt-3 italic">📝 "{transaccion.notas}"</p>
+            )}
           </div>
-          {transaccion.notas && (
-            <p className="text-xs text-gray-500 mt-2 italic">📝 "{transaccion.notas}"</p>
+          {esPendiente && (
+            <button 
+              onClick={() => setIsEditing(!isEditing)}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${isEditing ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <span className="material-symbols-outlined text-[14px] align-middle mr-1">{isEditing ? 'check' : 'edit'}</span>
+              {isEditing ? 'Listo' : 'Corregir'}
+            </button>
           )}
         </div>
+
+        {hayOtrasPendientes && esPendiente && (
+          <div className="bg-amber-50 border-y border-amber-200 px-5 py-3 flex items-start gap-3">
+            <span className="material-symbols-outlined text-amber-600 shrink-0">warning</span>
+            <p className="text-amber-800 text-xs font-medium leading-relaxed">
+              <strong>¡Atención!</strong> Este miembro tiene otros pagos pendientes. Si es el mismo comprobante subido varias veces, puedes <strong>Corregir</strong> aquí los meses y el monto, aprobar esta transacción, y rechazar la otra para evitar duplicados.
+            </p>
+          </div>
+        )}
 
         <div className="p-4 bg-gray-50 flex items-center justify-center min-h-56">
           {transaccion.comprobante_url ? (
@@ -545,9 +600,9 @@ function PagosTab({ member, onUpdateMember }) {
   };
 
   // ── Aprobar/Rechazar pago del representante ─────────────────────────────────
-  const handleVerificarPago = async (txn, nuevoEstado, notaExtra) => {
+  const handleVerificarPago = async (txn, nuevoEstado, notaExtra, updates = {}) => {
     if (!txn.id) return;
-    const updateData = { estado_verificacion: nuevoEstado };
+    const updateData = { estado_verificacion: nuevoEstado, ...updates };
     if (notaExtra) updateData.notas = `${txn.notas || ''} [${nuevoEstado === 'rechazado' ? 'Rechazado' : 'Aprobado'}: ${notaExtra}]`.trim();
 
     const { error } = await supabase

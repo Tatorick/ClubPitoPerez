@@ -29,11 +29,13 @@ function ReceiptViewer({ transaccion, mesCodigo, hayOtrasPendientes, onClose, on
 
   const handleAprobar = async () => {
     setAccionLoading('aprobar');
-    const updates = {};
-    if (isEditing) {
-      updates.monto_real = parseFloat(montoEdit) || transaccion.monto_real;
-      updates.meses_cubiertos = mesesEdit.split(',').map(m => m.trim()).filter(Boolean);
-    }
+    const updates = {
+      monto_real: parseFloat(montoEdit) || 0,
+      meses_cubiertos: mesesEdit.split(',').map(m => m.trim()).filter(Boolean)
+    };
+    // Si el montoEdit está vacío o es inválido, evitamos enviar NaN.
+    if (isNaN(updates.monto_real)) updates.monto_real = transaccion.monto_real;
+    
     await onAprobar(transaccion, updates);
     setAccionLoading(null);
     onClose();
@@ -98,7 +100,7 @@ function ReceiptViewer({ transaccion, mesCodigo, hayOtrasPendientes, onClose, on
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Meses cubiertos por este pago</p>
             {!isEditing ? (
               <div className="flex gap-2 flex-wrap">
-                {(transaccion.meses_cubiertos || []).map(cod => (
+                {mesesEdit.split(',').map(m => m.trim()).filter(Boolean).map(cod => (
                   <span key={cod}
                     className={`px-3 py-1 rounded-full text-xs font-bold border ${cod === mesCodigo ? 'bg-[#001f3f] text-white border-[#001f3f]' : 'bg-white text-gray-600 border-gray-300'}`}>
                     {cod}
@@ -117,7 +119,7 @@ function ReceiptViewer({ transaccion, mesCodigo, hayOtrasPendientes, onClose, on
             
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-4 mb-2">Monto del Pago</p>
             {!isEditing ? (
-              <p className="text-sm font-bold text-gray-800">${Number(transaccion.monto_real).toFixed(2)}</p>
+              <p className="text-sm font-bold text-gray-800">${Number(montoEdit || 0).toFixed(2)}</p>
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-gray-500 font-bold">$</span>

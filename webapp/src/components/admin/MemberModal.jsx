@@ -413,6 +413,7 @@ function PagosTab({ member, onUpdateMember }) {
   const { precioPension } = useClubConfig();
   const [receiptOpen, setReceiptOpen] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [facturandoTxnId, setFacturandoTxnId] = useState(null);
 
   const descuentoPorcentaje = Number(member.descuento_porcentaje || 0);
   let montoPension = (precioPension || 55.00) * (1 - descuentoPorcentaje / 100);
@@ -505,6 +506,38 @@ function PagosTab({ member, onUpdateMember }) {
       alert(`✅ Factura emitida exitosamente: ${resFactura.numeroDocumento || 'Ver en Facturero Móvil'}`);
     } catch (err) {
       alert(`Error al reintentar emisión de factura: ${err.message}`);
+    }
+  };
+
+  // ── Emitir factura nueva para transacción aprobada sin factura ──────────────
+  const handleEmitirFacturaNueva = async (txn) => {
+    if (!member.id || !txn.id) return;
+    if (!member.facturacion_ruc || !member.facturacion_nombre) {
+      alert('⚠ El miembro no tiene datos de facturación completos (RUC y razón social). Actualízalos en la pestaña "Ficha Completa".');
+      return;
+    }
+    setFacturandoTxnId(txn.id);
+    try {
+      const resFactura = await factureroService.emitirFacturaTransaccion({
+        transaccion: txn,
+        miembro: member
+      });
+      const updatedTxns = (member.transacciones || []).map(t =>
+        t.id === txn.id ? {
+          ...t,
+          estado_factura: 'autorizado',
+          factura_id: resFactura.numeroDocumento,
+          factura_pdf: resFactura.pdf,
+          factura_xml: resFactura.xml
+        } : t
+      );
+      if (onUpdateMember) onUpdateMember({ ...member, transacciones: updatedTxns });
+      alert(`✅ Factura emitida: ${resFactura.numeroDocumento || 'Ver en Facturero Móvil'}`);
+    } catch (err) {
+      console.error('Error emitiendo factura:', err);
+      alert(`Error al emitir factura: ${err.message}`);
+    } finally {
+      setFacturandoTxnId(null);
     }
   };
 
@@ -709,13 +742,31 @@ function PagosTab({ member, onUpdateMember }) {
                       />
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
                     <p className="font-bold text-gray-800">${Number(txn.monto_real).toFixed(2)}</p>
                     {txn.comprobante_url && (
                       <button
                         onClick={() => setReceiptOpen({ transaccion: txn, mesCodigo: txn.meses_cubiertos?.[0] })}
                         className="text-[10px] text-blue-600 hover:underline">
                         Ver comprobante
+                      </button>
+                    )}
+                    {/* Botón emitir factura nueva (solo si está aprobada y sin factura) */}
+                    {(estadoVerif === 'aprobado' || !estadoVerif) &&
+                     (!txn.estado_factura || txn.estado_factura === 'pendiente') &&
+                     !txn.factura_pdf && (
+                      <button
+                        onClick={() => handleEmitirFacturaNueva(txn)}
+                        disabled={facturandoTxnId === txn.id}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                        title="Emitir factura electrónica SRI"
+                      >
+                        {facturandoTxnId === txn.id ? (
+                          <span className="material-symbols-outlined text-[12px] animate-spin">progress_activity</span>
+                        ) : (
+                          <span className="material-symbols-outlined text-[12px]">receipt_long</span>
+                        )}
+                        {facturandoTxnId === txn.id ? 'Emitiendo...' : 'Emitir Factura'}
                       </button>
                     )}
                   </div>

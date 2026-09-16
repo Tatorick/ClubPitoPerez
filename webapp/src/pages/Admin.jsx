@@ -22,17 +22,21 @@ function getShortRepName(fullName) {
 
 function getPaymentStatus(transacciones) {
   const meses = derivarEstadoMeses(transacciones);
-  const vencidos  = meses.filter(p => p.estado === 'vencido').length;
-  const pendientes = meses.filter(p => p.estado === 'pendiente').length;
-  if (vencidos > 0) return { color: 'red',    label: `${vencidos} mes${vencidos > 1 ? 'es' : ''} vencido${vencidos > 1 ? 's' : ''}`, icon: 'cancel' };
-  if (pendientes > 0) return { color: 'amber', label: 'Pago del mes pendiente', icon: 'schedule' };
+  const vencidos      = meses.filter(p => p.estado === 'vencido').length;
+  const pendientes    = meses.filter(p => p.estado === 'pendiente').length;
+  // Detectar si hay comprobantes subidos pero aún sin verificar por el admin
+  const porVerificar  = (transacciones || []).filter(t => t.estado_verificacion === 'pendiente_verificacion').length;
+  if (vencidos > 0)      return { color: 'red',    label: `${vencidos} mes${vencidos > 1 ? 'es' : ''} vencido${vencidos > 1 ? 's' : ''}`, icon: 'cancel' };
+  if (porVerificar > 0)  return { color: 'orange', label: 'Comprobante por verificar', icon: 'hourglass_top' };
+  if (pendientes > 0)    return { color: 'amber',  label: 'Pago del mes pendiente', icon: 'schedule' };
   return { color: 'green', label: 'Al día', icon: 'check_circle' };
 }
 
 const statusStyle = {
-  red:   'bg-red-100 text-red-700 border-red-200',
-  amber: 'bg-amber-100 text-amber-700 border-amber-200',
-  green: 'bg-green-100 text-green-700 border-green-200',
+  red:    'bg-red-100 text-red-700 border-red-200',
+  amber:  'bg-amber-100 text-amber-700 border-amber-200',
+  green:  'bg-green-100 text-green-700 border-green-200',
+  orange: 'bg-orange-100 text-orange-700 border-orange-200',
 };
 
 // ── Mini calendar strip ────────────────────────────────────────────
@@ -73,30 +77,28 @@ function DashboardView({ miembros, precioPension }) {
   const [transacciones, setTransacciones] = useState([]);
   const [loadingTxn, setLoadingTxn] = useState(true);
   const [facturandoId, setFacturandoId] = useState(null);
+  // Sección activa en la tabla inferior: 'facturas' | 'historial'
+  const [seccionTabla, setSeccionTabla] = useState('facturas');
 
   const handleEmitirFactura = async (t) => {
-    if (!t.miembros) return alert("Faltan datos del deportista");
+    if (!t.miembros) return alert('Faltan datos del deportista');
     try {
       setFacturandoId(t.id);
-      
       const resFactura = await factureroService.emitirFacturaTransaccion({
         transaccion: t,
         miembro: t.miembros
       });
-
-      // Reflejar en la UI
       setTransacciones(prev => prev.map(tx => tx.id === t.id ? {
-        ...tx, 
+        ...tx,
         factura_id: resFactura.numeroDocumento,
         factura_pdf: resFactura.pdf,
         factura_xml: resFactura.xml,
         estado_factura: 'autorizado'
       } : tx));
-      
-      alert(`✅ Factura emitida exitosamente.\nNúmero: ${resFactura.numeroDocumento || 'Ver en Facturero Móvil'}\nTotal: $${(resFactura.detalles || []).reduce((s, it) => s + ((it.cantidad * it.precioUnitario) - it.descuento), 0).toFixed(2)}`);
+      alert(`✅ Factura emitida exitosamente.\nNúmero: ${resFactura.numeroDocumento || 'Ver en Facturero Móvil'}`);
     } catch (error) {
-      console.error("Error al facturar:", error);
-      alert("Ocurrió un error al emitir la factura: " + error.message);
+      console.error('Error al facturar:', error);
+      alert('Ocurrió un error al emitir la factura: ' + error.message);
     } finally {
       setFacturandoId(null);
     }
@@ -119,7 +121,7 @@ function DashboardView({ miembros, precioPension }) {
   const mesActual = ahora.getMonth();
   const anioActual = ahora.getFullYear();
 
-  // Solo transacciones aprobadas (excluye explicitamente las rechazadas)
+  // Solo transacciones aprobadas (excluye rechazadas y pendientes de verificación)
   const aprobadas = transacciones.filter(t => t.estado_verificacion !== 'rechazado' && t.estado_verificacion !== 'pendiente_verificacion');
 
   // Ingresos del mes actual
@@ -142,8 +144,8 @@ function DashboardView({ miembros, precioPension }) {
     return sum + mesesVenc.reduce((s, mes) => s + mes.montoPension, 0);
   }, 0);
 
-  const alDia = miembros.filter(m => getPaymentStatus(m.transacciones).color === 'green').length;
-  const deudores = miembros.filter(m => getPaymentStatus(m.transacciones).color === 'red').length;
+  const alDia        = miembros.filter(m => getPaymentStatus(m.transacciones).color === 'green').length;
+  const deudores     = miembros.filter(m => getPaymentStatus(m.transacciones).color === 'red').length;
   const conDescuento = miembros.filter(m => Number(m.descuento_porcentaje || 0) > 0).length;
 
   // Recaudación por mes para el gráfico
@@ -159,9 +161,12 @@ function DashboardView({ miembros, precioPension }) {
   });
   const maxBar = Math.max(...recaudacionPorMes.map(m => m.total), 1);
 
-  const ultimas = transacciones.slice(0, 10);
+  // ── Facturas pendientes: aprobadas sin factura emitida ─────────────
+  const facturasPendientes = aprobadas.filter(t => !t.factura_pdf && (!t.estado_factura || t.estado_factura === 'pendiente'));
 
-  // Exportar CSV (Módulo 4)
+  const ultimas = transacciones.slice(0, 12);
+
+  // Exportar CSV
   const exportarCSV = () => {
     const filas = [
       ['Nombre', 'Fecha', 'Monto', 'Meses Cubiertos', 'Estado'],
@@ -285,83 +290,181 @@ function DashboardView({ miembros, precioPension }) {
         </div>
       </div>
 
-      {/* Últimas transacciones */}
+      {/* ── Sección inferior con pestañas: Facturas Pendientes / Historial ── */}
       <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2">
-            <span className="material-symbols-outlined text-gray-400">receipt_long</span>
+        {/* Tabs internas */}
+        <div className="flex border-b border-gray-100">
+          <button
+            onClick={() => setSeccionTabla('facturas')}
+            className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors border-b-2 ${
+              seccionTabla === 'facturas'
+                ? 'border-orange-500 text-orange-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+            Facturas Pendientes
+            {facturasPendientes.length > 0 && (
+              <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                {facturasPendientes.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setSeccionTabla('historial')}
+            className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors border-b-2 ${
+              seccionTabla === 'historial'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">history</span>
             Últimas Transacciones
-          </h3>
-          {loadingTxn && <span className="material-symbols-outlined text-gray-300 animate-spin text-[18px]">progress_activity</span>}
+          </button>
+          {loadingTxn && (
+            <div className="ml-auto px-4 flex items-center">
+              <span className="material-symbols-outlined text-gray-300 animate-spin text-[18px]">progress_activity</span>
+            </div>
+          )}
         </div>
-        {ultimas.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 text-sm">
-            {loadingTxn ? 'Cargando...' : 'No hay transacciones registradas aún.'}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  <th className="px-5 py-3 text-left">Deportista</th>
-                  <th className="px-5 py-3 text-left">Fecha</th>
-                  <th className="px-5 py-3 text-left">Meses</th>
-                  <th className="px-5 py-3 text-right">Monto</th>
-                  <th className="px-5 py-3 text-center">Estado</th>
-                  <th className="px-5 py-3 text-center">Factura</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {ultimas.map(t => {
-                  const est = t.estado_verificacion;
-                  const badge = est === 'aprobado' || !est
-                    ? 'bg-green-100 text-green-700'
-                    : est === 'rechazado'
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-amber-100 text-amber-700';
-                  const label = est === 'aprobado' || !est ? 'Aprobado' : est === 'rechazado' ? 'Rechazado' : 'En revisión';
-                  
-                  const isAprobado = est === 'aprobado' || !est;
-                  const hasFactura = !!t.factura_pdf;
 
-                  return (
-                    <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-3 font-medium text-gray-800">{t.miembros?.nombres || '—'}</td>
-                      <td className="px-5 py-3 text-gray-500 text-xs">{t.fecha_pago || '—'}</td>
-                      <td className="px-5 py-3 text-gray-500 text-xs">{(t.meses_cubiertos || []).join(', ') || '—'}</td>
-                      <td className="px-5 py-3 text-right font-bold text-gray-800">${Number(t.monto_real || 0).toFixed(2)}</td>
-                      <td className="px-5 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badge}`}>{label}</span>
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        {hasFactura ? (
-                          <a href={t.factura_pdf} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors">
-                            <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
-                            Ver
-                          </a>
-                        ) : isAprobado ? (
-                          <button 
-                            onClick={() => handleEmitirFactura(t)}
-                            disabled={facturandoId === t.id}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-green-500 px-2 py-1 rounded-md hover:bg-green-600 transition-colors disabled:opacity-50"
-                          >
-                            {facturandoId === t.id ? (
-                              <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+        {/* ── Pestaña: Facturas Pendientes ── */}
+        {seccionTabla === 'facturas' && (
+          <>
+            {facturasPendientes.length === 0 ? (
+              <div className="p-10 text-center">
+                <span className="material-symbols-outlined text-4xl text-green-300 mb-3 block">task_alt</span>
+                <p className="text-gray-500 text-sm font-semibold">¡Sin facturas pendientes!</p>
+                <p className="text-gray-400 text-xs mt-1">Todos los pagos aprobados ya tienen factura emitida.</p>
+              </div>
+            ) : (
+              <>
+                <div className="px-5 py-3 bg-orange-50 border-b border-orange-100 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-orange-500 text-[16px]">info</span>
+                  <p className="text-xs text-orange-700 font-semibold">
+                    {facturasPendientes.length} pago{facturasPendientes.length > 1 ? 's' : ''} aprobado{facturasPendientes.length > 1 ? 's' : ''} sin factura electrónica emitida.
+                  </p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        <th className="px-5 py-3 text-left">Deportista</th>
+                        <th className="px-5 py-3 text-left">Fecha</th>
+                        <th className="px-5 py-3 text-left">Meses</th>
+                        <th className="px-5 py-3 text-right">Monto</th>
+                        <th className="px-5 py-3 text-center">Facturar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {facturasPendientes.map(t => (
+                        <tr key={t.id} className="hover:bg-orange-50/50 transition-colors">
+                          <td className="px-5 py-3">
+                            <div>
+                              <p className="font-semibold text-gray-800 text-sm">{t.miembros?.nombres || '—'}</p>
+                              <p className="text-[10px] text-gray-400">{t.miembros?.facturacion_ruc ? `RUC: ${t.miembros.facturacion_ruc}` : 'Sin datos de facturación'}</p>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 text-gray-500 text-xs">{t.fecha_pago || '—'}</td>
+                          <td className="px-5 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {(t.meses_cubiertos || []).map(m => (
+                                <span key={m} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold">{m}</span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 text-right font-bold text-gray-800">${Number(t.monto_real || 0).toFixed(2)}</td>
+                          <td className="px-5 py-3 text-center">
+                            {t.miembros?.facturacion_ruc && t.miembros?.facturacion_nombre ? (
+                              <button
+                                onClick={() => handleEmitirFactura(t)}
+                                disabled={facturandoId === t.id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 shadow-sm"
+                              >
+                                {facturandoId === t.id ? (
+                                  <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                                ) : (
+                                  <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+                                )}
+                                {facturandoId === t.id ? 'Emitiendo...' : 'Emitir Factura'}
+                              </button>
                             ) : (
-                              <span className="material-symbols-outlined text-[14px]">receipt</span>
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
+                                <span className="material-symbols-outlined text-[12px]">warning</span>
+                                Sin datos
+                              </span>
                             )}
-                            Emitir
-                          </button>
-                        ) : (
-                          <span className="text-[10px] text-gray-400">-</span>
-                        )}
-                      </td>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── Pestaña: Últimas Transacciones (historial informativo) ── */}
+        {seccionTabla === 'historial' && (
+          <>
+            {ultimas.length === 0 ? (
+              <div className="p-10 text-center text-gray-400 text-sm">
+                {loadingTxn ? 'Cargando...' : 'No hay transacciones registradas aún.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      <th className="px-5 py-3 text-left">Deportista</th>
+                      <th className="px-5 py-3 text-left">Fecha</th>
+                      <th className="px-5 py-3 text-left">Meses</th>
+                      <th className="px-5 py-3 text-right">Monto</th>
+                      <th className="px-5 py-3 text-center">Estado</th>
+                      <th className="px-5 py-3 text-center">Factura</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {ultimas.map(t => {
+                      const est = t.estado_verificacion;
+                      const badge =
+                        est === 'aprobado' || !est ? 'bg-green-100 text-green-700' :
+                        est === 'rechazado'         ? 'bg-red-100 text-red-700' :
+                        est === 'pendiente_verificacion' ? 'bg-orange-100 text-orange-700' :
+                                                     'bg-amber-100 text-amber-700';
+                      const label =
+                        est === 'aprobado' || !est  ? 'Aprobado' :
+                        est === 'rechazado'          ? 'Rechazado' :
+                        est === 'pendiente_verificacion' ? 'Por verificar' : 'En revisión';
+                      return (
+                        <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-5 py-3 font-medium text-gray-800">{t.miembros?.nombres || '—'}</td>
+                          <td className="px-5 py-3 text-gray-500 text-xs">{t.fecha_pago || '—'}</td>
+                          <td className="px-5 py-3 text-gray-500 text-xs">{(t.meses_cubiertos || []).join(', ') || '—'}</td>
+                          <td className="px-5 py-3 text-right font-bold text-gray-800">${Number(t.monto_real || 0).toFixed(2)}</td>
+                          <td className="px-5 py-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badge}`}>{label}</span>
+                          </td>
+                          <td className="px-5 py-3 text-center">
+                            {t.factura_pdf ? (
+                              <a href={t.factura_pdf} target="_blank" rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors">
+                                <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                                Ver PDF
+                              </a>
+                            ) : (
+                              <span className="text-[10px] text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>
@@ -397,7 +500,7 @@ function MiembrosView({ onOpenMember, miembros, loading, precioPension }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Total Miembros" value={miembros.length} icon="groups" color="blue" />
         <StatCard label="Al Día" value={miembros.filter(m => getPaymentStatus(m.transacciones).color === 'green').length} icon="check_circle" color="green" />
-        <StatCard label="Pendientes" value={miembros.filter(m => getPaymentStatus(m.transacciones).color === 'amber').length} icon="schedule" color="amber" />
+        <StatCard label="Por Verificar" value={miembros.filter(m => getPaymentStatus(m.transacciones).color === 'orange').length} icon="hourglass_top" color="amber" />
         <StatCard label="Deudores" value={miembros.filter(m => getPaymentStatus(m.transacciones).color === 'red').length} icon="warning" color="red" />
       </div>
 

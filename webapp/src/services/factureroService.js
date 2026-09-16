@@ -349,8 +349,7 @@ class FactureroService {
       .update({
         factura_id:     numeroDoc,
         factura_pdf:    pdfUrl,
-        factura_xml:    xmlUrl,
-        estado_factura: 'autorizado',
+        factura_xml:    xmlUrl
       })
       .eq('id', transaccion.id);
 

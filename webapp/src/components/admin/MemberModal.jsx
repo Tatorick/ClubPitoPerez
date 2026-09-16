@@ -447,8 +447,7 @@ function PagosTab({ member, onUpdateMember }) {
           monto_real: nuevaTxn.monto_real,
           notas: nuevaTxn.notas,
           comprobante_url: nuevaTxn.comprobante_url,
-          meses_cubiertos: nuevaTxn.meses_cubiertos,
-          estado_factura: emitirFactura ? 'procesando' : 'pendiente',
+          meses_cubiertos: nuevaTxn.meses_cubiertos
         }).select().single();
 
         if (tErr) console.error('Error guardando transaccion en Supabase:', tErr);

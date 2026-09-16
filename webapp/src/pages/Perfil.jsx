@@ -116,8 +116,8 @@ function UploadPaymentModal({ mesesStatus, miembroId, hayPendientes, onClose, on
   const [montoCustom, setMontoCustom] = useState('');
   const [notasCustom, setNotasCustom] = useState('');
 
-  // Meses disponibles que no están pagados
-  const mesesDisponibles = mesesStatus.filter(m => !['pagado', 'adelanto'].includes(m.estado));
+  // Meses disponibles que no están pagados ni en verificación
+  const mesesDisponibles = mesesStatus.filter(m => !['pagado', 'adelanto', 'en_verificacion'].includes(m.estado));
 
   // Pre-seleccionar el primer mes que deba pagar
   useEffect(() => {
@@ -268,17 +268,18 @@ function UploadPaymentModal({ mesesStatus, miembroId, hayPendientes, onClose, on
 
             <div className="grid grid-cols-4 gap-2">
               {mesesStatus.map(m => {
-                const isPaid = ['pagado', 'adelanto'].includes(m.estado);
+                const isUnavailable = ['pagado', 'adelanto', 'en_verificacion'].includes(m.estado);
+                const isEnVerif = m.estado === 'en_verificacion';
                 const isSelected = mesesSeleccionados.includes(m.codigo);
 
                 return (
                   <button
                     key={m.codigo}
                     type="button"
-                    disabled={isPaid}
+                    disabled={isUnavailable}
                     onClick={() => toggleMes(m.codigo)}
                     className={`py-3 px-2 rounded-2xl border-2 text-center transition-all flex flex-col items-center justify-center ${
-                      isPaid
+                      isUnavailable
                         ? 'bg-gray-100 border-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
                         : isSelected
                         ? 'bg-[#001f3f] border-[#001f3f] text-white shadow-lg scale-[1.03]'
@@ -289,7 +290,11 @@ function UploadPaymentModal({ mesesStatus, miembroId, hayPendientes, onClose, on
                     <span className={`text-[11px] ${isSelected ? 'text-orange-400 font-semibold' : 'text-gray-500'}`}>
                       ${m.montoPension}
                     </span>
-                    {isPaid && <span className="text-[9px] text-green-700 font-semibold mt-0.5">Listo</span>}
+                    {isUnavailable && (
+                      <span className={`text-[9px] font-semibold mt-0.5 ${isEnVerif ? 'text-orange-600' : 'text-green-700'}`}>
+                        {isEnVerif ? 'En Revisión' : 'Listo'}
+                      </span>
+                    )}
                   </button>
                 );
               })}
